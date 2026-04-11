@@ -147,6 +147,7 @@ function AppCard({ app }: { app: DataApp }) {
 // ── Marketplace ───────────────────────────────────────────────────────────────
 export function AppMarketplace() {
   const [subscribed, setSubscribed] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const { data, isLoading } = useApps({ subscribed: subscribed || undefined });
 
   return (
@@ -155,7 +156,7 @@ export function AppMarketplace() {
         title="データアプリ"
         description="データアプリのマーケットプレイス"
         action={
-          <Button variant="primary">
+          <Button variant="primary" onClick={() => setShowForm(true)}>
             <svg
               className="w-4 h-4"
               fill="none"
@@ -206,6 +207,27 @@ export function AppMarketplace() {
           {(data?.items ?? []).map((app) => (
             <AppCard key={app.app_id} app={app} />
           ))}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <h2 className="text-base font-medium text-gray-900">
+                データアプリ登録申請
+              </h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto">
+              <AppRegistrationForm onSuccess={() => setShowForm(false)} />
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -269,9 +291,7 @@ export function AppRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
   const labelCls = "block text-xs font-medium text-gray-700 mb-1";
 
   return (
-    <div className="p-6">
-      <PageHeader title="データアプリ登録申請" />
-      <form onSubmit={handleSubmit(onSubmit)} className="max-w-lg space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
         <div>
           <label className={labelCls}>
             アプリ名 <span className="text-red-500">*</span>
@@ -365,15 +385,14 @@ export function AppRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
         )}
 
-        <div className="flex gap-2 pt-2">
-          <Button type="submit" variant="primary" loading={isSubmitting}>
-            登録する
-          </Button>
+        <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
           <Button type="button" variant="secondary" onClick={onSuccess}>
             キャンセル
           </Button>
+          <Button type="submit" variant="primary" loading={isSubmitting}>
+            登録する
+          </Button>
         </div>
-      </form>
-    </div>
+    </form>
   );
 }

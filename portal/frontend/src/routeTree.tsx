@@ -11,10 +11,7 @@ import { CatalogDetailPage } from "./components/catalog/CatalogDetailPage";
 import { CrossSearch } from "./components/catalog/CrossSearch";
 import { AccessRequestManagement } from "./components/catalog/AccessRequestManagement";
 import { MouEditor } from "./components/catalog/MouEditor";
-import {
-  AppMarketplace,
-  AppRegistrationForm,
-} from "./components/apps/AppMarketplace";
+import { AppMarketplace } from "./components/apps/AppMarketplace";
 import { VehicleAnalysis } from "./components/analysis/VehicleAnalysis";
 import { StatisticsAnalysis } from "./components/analysis/StatisticsAnalysis";
 import {
@@ -146,14 +143,6 @@ const appsRoute = createRoute({
   component: AppMarketplace,
 });
 
-const appsRegisterRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/apps/register",
-  component: () => (
-    <AppRegistrationForm onSuccess={() => window.history.back()} />
-  ),
-});
-
 // ── Analysis routes ───────────────────────────────────────────────────────────
 const vehiclesRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -189,7 +178,6 @@ export const routeTree = rootRoute.addChildren([
   catalogRequestsRoute,
   mouEditorRoute,
   appsRoute,
-  appsRegisterRoute,
   vehiclesRoute,
   statisticsRoute,
   notificationsRoute,
