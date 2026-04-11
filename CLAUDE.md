@@ -60,8 +60,12 @@ make lambda-update ENV=dev  # update Lambda code only (fast, no Terraform)
 make frontend-deploy ENV=dev # build + S3 sync + CloudFront invalidation
 ```
 
+**Use `uv` command to execute tools within virtual environment**
 ```bash
 uv run python  # execute python script
+uv run pytest -v  # pytest
+uv run ruff check -I --fix  # ruff check, organize imports
+uv run ruff format  # format python
 ```
 
 **Frontend checks (from `portal/frontend/`)**
