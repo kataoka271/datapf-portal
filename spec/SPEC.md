@@ -81,8 +81,18 @@ Databricks（AWS上）を中核とした自動車データ管理ポータル。
 
 `requires_approval=false`（デフォルト）の場合は MOU 合意で即 APPROVED。`true` の場合は PENDING のままデータオーナーが承認するまで待機。
 
+#### カタログ詳細ページ
+
+- マーケットプレイスの各カード「詳細」ボタンから `/catalogs/{catalog_name}` に遷移
+- 表示内容: 表示名・カタログ名（ID）・説明・ステータス・MOU バージョン・承認フロー有無・スキーマ一覧（スキーマ名 / テーブル数）
+- **データオーナー向け**（`my_role === "owner"`）:
+  - 「MOU 編集」ボタン → `/catalogs/{catalog_name}/mou`
+  - 「申請管理」ボタン → `/catalogs/{catalog_name}/requests`
+- **一般ユーザー向け**: アクセス状況バナー（未申請 / 審査中 / 閲覧中 / 却下済み）を表示し、未申請・却下済みの場合は閲覧申請モーダルを開くボタンを配置
+
 #### MOU・チェックリスト管理（データオーナー）
 
+- カタログ詳細ページの「MOU 編集」ボタンから `/catalogs/{catalog_name}/mou` に遷移
 - MOU 本文（Markdown）とチェックリスト項目を編集・バージョン発行
 - 新バージョン発行時は既存ユーザーの再合意は不要（オーナーが任意に促す運用）
 - バージョン文字列は `v1`, `v2`, ... と採番
@@ -102,7 +112,14 @@ Databricks（AWS上）を中核とした自動車データ管理ポータル。
 
 #### カタログ作成申請
 
-- Lambda がサービスプリンシパルで Databricks Catalogs REST API を呼び出しカタログ作成
+- マーケットプレイス右上の「カタログ作成申請」ボタンでモーダルフォームを開く
+- 入力フィールド:
+  - **カタログ名**（必須）: 英数字とアンダースコアのみ（`^[a-zA-Z0-9_]+$`）。作成後変更不可
+  - **表示名**（必須）: ポータル上の表示用ラベル
+  - **説明**（任意）: Markdown 可
+  - **承認フロー**: チェックで `requires_approval=true`（デフォルト `false`）
+- バリデーション: React Hook Form + Zod（フロントエンド）、Pydantic Field pattern（バックエンド）
+- 送信後: Lambda がサービスプリンシパルで Databricks Catalogs REST API を呼び出しカタログ作成
 - 作成者を `catalog-owner-{catalog_name}` グループに追加し ALL PRIVILEGES を GRANT
 - `portal.governance.catalog_definitions` に INSERT
 
@@ -113,7 +130,7 @@ Databricks（AWS上）を中核とした自動車データ管理ポータル。
 | 機能 | 実装方針 |
 |---|---|
 | 登録申請 | アプリ名・説明・redirect_url・使用カタログ・Cognito User Pool ARN を入力して `portal.apps.app_registry` に記録 |
-| マーケットプレイス表示 | Delta Table からアプリ一覧を取得しカード形式で表示。`is_subscribed` で操作ボタン切り替え |
+| マーケットプレイス表示 | Delta Table からアプリ一覧を取得しカード形式で表示。`is_subscribed` で操作ボタン切り替え。`owner_user_id === ログインユーザー ID` のカードには「オーナー」バッジを表示 |
 | 使用開始申請 | `portal.apps.app_subscriptions` に記録、アプリ管理者に SES メール、Cognito 自動プロビジョニング |
 | 使用解除 | Delta Table ステータス更新（REVOKED）+ Cognito からユーザー削除 |
 | リダイレクト | Cognito で署名済みトークン付与 URL を生成してアプリに遷移。URL は外部に露出しないこと（有効期限 300 秒） |
@@ -370,7 +387,7 @@ Lambda の全 API 呼び出しで共通ミドルウェアが書き込む。PARTI
 | `/login` | ログイン | 未認証 |
 | `/catalogs/marketplace` | カタログマーケットプレイス | 全ロール |
 | `/catalogs/:name` | カタログ詳細 | 全ロール |
-| `/catalogs/:name/edit` | MOU エディタ（データオーナー） | データオーナー |
+| `/catalogs/:name/mou` | MOU エディタ | データオーナー |
 | `/catalogs/:name/requests` | 閲覧申請管理 | データオーナー |
 | `/catalogs/search` | 横断検索 | 全ロール |
 | `/apps` | データアプリマーケットプレイス | 全ロール |
@@ -379,6 +396,12 @@ Lambda の全 API 呼び出しで共通ミドルウェアが書き込む。PARTI
 | `/analysis/statistics` | 統計分析 | データ閲覧者以上 |
 | `/notifications` | 通知一覧 | 全ロール |
 | `/alerts` | データ品質アラート一覧 | データオーナー |
+
+### ヘッダー
+
+- 右端にログインユーザーの `display_name` を表示（SM 幅以上）
+- `display_name` 先頭 2 文字のイニシャルをアバター円に表示（全幅共通）
+- アバターホバー時に `title` 属性でフルネームを tooltip 表示
 
 ### 主要な状態管理
 
