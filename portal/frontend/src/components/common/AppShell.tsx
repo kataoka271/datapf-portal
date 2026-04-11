@@ -173,9 +173,17 @@ function Header() {
         )}
       </div>
 
-      {/* User avatar */}
-      <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white text-sm font-semibold">
-        {user?.display_name?.slice(0, 2).toUpperCase() ?? "US"}
+      {/* User */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-white/80 hidden sm:block">
+          {user?.display_name ?? ""}
+        </span>
+        <div
+          className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+          title={user?.display_name ?? ""}
+        >
+          {user?.display_name?.slice(0, 2).toUpperCase() ?? "US"}
+        </div>
       </div>
     </header>
   );
