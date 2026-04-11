@@ -2,20 +2,20 @@
 
 ## 技術スタック
 
-| ライブラリ | バージョン | 用途 |
-|---|---|---|
-| React | 19 | UI フレームワーク |
-| TypeScript | 5.5 | 型安全 |
-| Vite | 5 | ビルド・HMR |
-| Tailwind CSS | 3.4 | スタイリング |
-| TanStack Router | 1.45 | 型安全ルーティング |
-| TanStack Query | 5.45 | サーバー状態管理・キャッシュ |
-| Zustand | 4.5 | クライアント状態管理 |
-| React Hook Form + Zod | 7.52 / 3.23 | フォームバリデーション |
-| deck.gl + kepler.gl | 9.0 | 地図・走行軌跡可視化 |
-| Recharts | 2.12 | 時系列ラインチャート |
-| clsx | 2.1 | 条件付きクラス名 |
-| oidc-client-ts | 3.0 | OIDC 認証（IAM Identity Center） |
+| ライブラリ            | バージョン  | 用途                             |
+| --------------------- | ----------- | -------------------------------- |
+| React                 | 19          | UI フレームワーク                |
+| TypeScript            | 5.5         | 型安全                           |
+| Vite                  | 5           | ビルド・HMR                      |
+| Tailwind CSS          | 3.4         | スタイリング                     |
+| TanStack Router       | 1.45        | 型安全ルーティング               |
+| TanStack Query        | 5.45        | サーバー状態管理・キャッシュ     |
+| Zustand               | 4.5         | クライアント状態管理             |
+| React Hook Form + Zod | 7.52 / 3.23 | フォームバリデーション           |
+| deck.gl + kepler.gl   | 9.0         | 地図・走行軌跡可視化             |
+| Recharts              | 2.12        | 時系列ラインチャート             |
+| clsx                  | 2.1         | 条件付きクラス名                 |
+| oidc-client-ts        | 3.0         | OIDC 認証（IAM Identity Center） |
 
 ---
 
@@ -62,23 +62,23 @@ src/
 
 ```typescript
 // ✅ 正しい
-import { useCatalogs } from '@/hooks'
-const { data, isLoading } = useCatalogs({ q: query })
+import { useCatalogs } from "@/hooks";
+const { data, isLoading } = useCatalogs({ q: query });
 
 // ❌ 禁止（コンポーネント内で直接 fetch）
-const data = await fetch('/v1/catalogs')
+const data = await fetch("/v1/catalogs");
 ```
 
 ### 2. 変更操作は useMutation + useUIStore でトースト通知
 
 ```typescript
-const mutation = useSomeMutation()
-const { addToast } = useUIStore()
+const mutation = useSomeMutation();
+const { addToast } = useUIStore();
 
 mutation.mutate(payload, {
-  onSuccess: () => addToast({ type: 'success', message: '保存しました' }),
-  onError:   () => addToast({ type: 'error',   message: '失敗しました' }),
-})
+  onSuccess: () => addToast({ type: "success", message: "保存しました" }),
+  onError: () => addToast({ type: "error", message: "失敗しました" }),
+});
 ```
 
 ### 3. ローディング状態は必ず表示する
@@ -109,28 +109,32 @@ import { ConfirmDialog } from '@/components/common/ui'
 ### 5. フォームは React Hook Form + Zod
 
 ```typescript
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
-const schema = z.object({ name: z.string().min(1, '必須') })
-type FormValues = z.infer<typeof schema>
+const schema = z.object({ name: z.string().min(1, "必須") });
+type FormValues = z.infer<typeof schema>;
 
-const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+const {
+  register,
+  handleSubmit,
+  formState: { errors },
+} = useForm<FormValues>({
   resolver: zodResolver(schema),
-})
+});
 ```
 
 ---
 
 ## 状態管理の使い分け
 
-| 状態の種類 | 使う手段 | 例 |
-|---|---|---|
-| サーバーから取得したデータ | TanStack Query | カタログ一覧、通知一覧 |
-| 認証情報・トークン | `useAuthStore` | `user`, `token` |
-| UI の一時状態 | `useState` | モーダル開閉、フィルタ値 |
-| トースト・サイドバー開閉 | `useUIStore` | `addToast()`, `sidebarOpen` |
+| 状態の種類                           | 使う手段           | 例                            |
+| ------------------------------------ | ------------------ | ----------------------------- |
+| サーバーから取得したデータ           | TanStack Query     | カタログ一覧、通知一覧        |
+| 認証情報・トークン                   | `useAuthStore`     | `user`, `token`               |
+| UI の一時状態                        | `useState`         | モーダル開閉、フィルタ値      |
+| トースト・サイドバー開閉             | `useUIStore`       | `addToast()`, `sidebarOpen`   |
 | 分析画面の選択状態（ページをまたぐ） | `useAnalysisStore` | `selectedVehicleId`, `region` |
 
 ---
@@ -139,26 +143,23 @@ const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
 
 ```typescript
 // 一覧
-['catalogs', { q, subscribed }]
-['apps', { q, subscribed }]
-['notifications', { is_read, limit }]
-['alerts', { catalog_name, status }]
-
-// 単体
-['catalogs', catalogName]
-['catalogs', catalogName, 'mou']
-['catalogs', catalogName, 'members']
-['catalogs', catalogName, 'access-requests', statusFilter]
-
-// 分析
-['analysis', 'vehicles', region, atTime]
-['analysis', 'vehicle', vehicleId, 'status', atTime]
-['analysis', 'vehicle', vehicleId, 'timeseries', columns, timeFrom, timeTo]
-['analysis', 'vehicle', vehicleId, 'video', atTime]
+["catalogs", { q, subscribed }][("apps", { q, subscribed })][
+  ("notifications", { is_read, limit })
+][("alerts", { catalog_name, status })][
+  // 単体
+  ("catalogs", catalogName)
+][("catalogs", catalogName, "mou")][("catalogs", catalogName, "members")][
+  ("catalogs", catalogName, "access-requests", statusFilter)
+][
+  // 分析
+  ("analysis", "vehicles", region, atTime)
+][("analysis", "vehicle", vehicleId, "status", atTime)][
+  ("analysis", "vehicle", vehicleId, "timeseries", columns, timeFrom, timeTo)
+][("analysis", "vehicle", vehicleId, "video", atTime)];
 
 // 変更後に invalidate するキー
-qc.invalidateQueries({ queryKey: ['catalogs'] })   // カタログ関連を全無効化
-qc.invalidateQueries({ queryKey: ['notifications'] })
+qc.invalidateQueries({ queryKey: ["catalogs"] }); // カタログ関連を全無効化
+qc.invalidateQueries({ queryKey: ["notifications"] });
 ```
 
 ---
@@ -186,14 +187,14 @@ style={{ backgroundColor: '#0F6E56' }}
 
 ### カラーパレット（テーマカラー）
 
-| 用途 | Tailwind クラス | HEX |
-|---|---|---|
-| プライマリ（アクション） | `bg-teal-600` / `text-teal-600` | `#0F6E56` |
-| 成功 | `bg-green-100 text-green-800` | — |
-| 警告 | `bg-amber-100 text-amber-800` | — |
-| エラー | `bg-red-100 text-red-800` | — |
-| ナビゲーション背景 | `bg-[#0C2340]` / `bg-[#1A3A5C]` | 直接指定 |
-| カード背景 | `bg-white border border-gray-100 rounded-xl` | — |
+| 用途                     | Tailwind クラス                              | HEX       |
+| ------------------------ | -------------------------------------------- | --------- |
+| プライマリ（アクション） | `bg-teal-600` / `text-teal-600`              | `#0F6E56` |
+| 成功                     | `bg-green-100 text-green-800`                | —         |
+| 警告                     | `bg-amber-100 text-amber-800`                | —         |
+| エラー                   | `bg-red-100 text-red-800`                    | —         |
+| ナビゲーション背景       | `bg-[#0C2340]` / `bg-[#1A3A5C]`              | 直接指定  |
+| カード背景               | `bg-white border border-gray-100 rounded-xl` | —         |
 
 ### レスポンシブグリッド
 
@@ -211,13 +212,13 @@ style={{ backgroundColor: '#0F6E56' }}
 通常のデータ取得は `src/hooks/index.ts` のカスタムフック経由を使う。
 
 ```typescript
-import { catalogsApi, appsApi, analysisApi } from '@/api'
+import { catalogsApi, appsApi, analysisApi } from "@/api";
 
 // mutation 内での直接呼び出し例
 const handleRedirect = async () => {
-  const { redirect_url } = await appsApi.redirectToken(app.app_id)
-  window.location.href = redirect_url
-}
+  const { redirect_url } = await appsApi.redirectToken(app.app_id);
+  window.location.href = redirect_url;
+};
 ```
 
 ---
@@ -234,13 +235,13 @@ const handleRedirect = async () => {
 
 ## 既知の TODO・未実装箇所
 
-| 箇所 | 内容 |
-|---|---|
-| `VehicleAnalysis.tsx` の `VehicleMap` | `<svg>` プレースホルダー → 実際の `DeckGL` コンポーネントに置き換える |
-| `main.tsx` のログイン処理 | `setToken('dev-mock-token')` → `oidc-client-ts` の `signinRedirect()` に置き換える |
-| `routeTree.ts` の `catalogRequestsRoute` | `catalogName` をハードコードしている → URL パラメータから取得する |
-| 統計分析の BoxPlot | `recharts` に BoxPlot がないため Plotly.js への切替を検討 |
-| `AppShell` のモバイル対応 | `width: 0` でサイドバーを隠しているが Drawer コンポーネントへの置換推奨 |
+| 箇所                                     | 内容                                                                               |
+| ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| `VehicleAnalysis.tsx` の `VehicleMap`    | `<svg>` プレースホルダー → 実際の `DeckGL` コンポーネントに置き換える              |
+| `main.tsx` のログイン処理                | `setToken('dev-mock-token')` → `oidc-client-ts` の `signinRedirect()` に置き換える |
+| `routeTree.ts` の `catalogRequestsRoute` | `catalogName` をハードコードしている → URL パラメータから取得する                  |
+| 統計分析の BoxPlot                       | `recharts` に BoxPlot がないため Plotly.js への切替を検討                          |
+| `AppShell` のモバイル対応                | `width: 0` でサイドバーを隠しているが Drawer コンポーネントへの置換推奨            |
 
 ---
 

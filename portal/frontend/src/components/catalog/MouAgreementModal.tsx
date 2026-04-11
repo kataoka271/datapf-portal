@@ -1,59 +1,69 @@
-import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { useMou, useCreateAccessRequest } from '@/hooks'
-import { useUIStore } from '@/stores'
-import { Button, Spinner } from '@/components/common/ui'
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { useMou, useCreateAccessRequest } from "@/hooks";
+import { useUIStore } from "@/stores";
+import { Button, Spinner } from "@/components/common/ui";
 
 interface Props {
-  catalogName: string
-  onClose: () => void
-  onSuccess: () => void
+  catalogName: string;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
 export function MouAgreementModal({ catalogName, onClose, onSuccess }: Props) {
-  const { data: mou, isLoading } = useMou(catalogName)
-  const { addToast } = useUIStore()
-  const apply = useCreateAccessRequest()
-  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const { data: mou, isLoading } = useMou(catalogName);
+  const { addToast } = useUIStore();
+  const apply = useCreateAccessRequest();
+  const [checked, setChecked] = useState<Set<string>>(new Set());
 
-  if (!mou && !isLoading) return null
+  if (!mou && !isLoading) return null;
 
   const toggle = (id: string) => {
     setChecked((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) { next.delete(id) } else { next.add(id) }
-      return next
-    })
-  }
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
-  const requiredUnchecked = mou?.checklist.filter((i) => i.required && !checked.has(i.item_id)) ?? []
-  const canSubmit = requiredUnchecked.length === 0
+  const requiredUnchecked =
+    mou?.checklist.filter((i) => i.required && !checked.has(i.item_id)) ?? [];
+  const canSubmit = requiredUnchecked.length === 0;
 
   const handleSubmit = () => {
-    if (!mou) return
+    if (!mou) return;
     apply.mutate(
       {
         catalogName,
         body: {
           mou_version: mou.version,
-          checklist_responses: mou.checklist.map((i) => ({ item_id: i.item_id, checked: checked.has(i.item_id) })),
+          checklist_responses: mou.checklist.map((i) => ({
+            item_id: i.item_id,
+            checked: checked.has(i.item_id),
+          })),
         },
       },
       {
         onSuccess: (res) => {
           addToast({
-            type: 'success',
-            message: res.status === 'APPROVED'
-              ? '閲覧権限が付与されました'
-              : '申請を送信しました。データオーナーの承認をお待ちください',
-          })
-          onSuccess()
+            type: "success",
+            message:
+              res.status === "APPROVED"
+                ? "閲覧権限が付与されました"
+                : "申請を送信しました。データオーナーの承認をお待ちください",
+          });
+          onSuccess();
         },
-        onError: () => addToast({ type: 'error', message: '申請に失敗しました' }),
-      }
-    )
-  }
+        onError: () =>
+          addToast({ type: "error", message: "申請に失敗しました" }),
+      },
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
@@ -61,31 +71,49 @@ export function MouAgreementModal({ catalogName, onClose, onSuccess }: Props) {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h2 className="text-base font-medium text-gray-900">閲覧申請</h2>
-            <p className="text-xs text-gray-500 mt-0.5 font-mono">{catalogName}</p>
+            <p className="text-xs text-gray-500 mt-0.5 font-mono">
+              {catalogName}
+            </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+          >
+            ×
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {isLoading ? (
-            <div className="flex justify-center py-8"><Spinner /></div>
+            <div className="flex justify-center py-8">
+              <Spinner />
+            </div>
           ) : (
             <>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-medium text-gray-700">MOU 本文</p>
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{mou!.version}</span>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                    {mou!.version}
+                  </span>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto text-xs text-gray-700 leading-relaxed prose prose-sm max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{mou!.mou_text}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {mou!.mou_text}
+                  </ReactMarkdown>
                 </div>
               </div>
 
               <div>
-                <p className="text-xs font-medium text-gray-700 mb-2">チェックリスト</p>
+                <p className="text-xs font-medium text-gray-700 mb-2">
+                  チェックリスト
+                </p>
                 <div className="space-y-2">
                   {mou!.checklist.map((item) => (
-                    <label key={item.item_id} className="flex items-start gap-2.5 cursor-pointer group">
+                    <label
+                      key={item.item_id}
+                      className="flex items-start gap-2.5 cursor-pointer group"
+                    >
                       <input
                         type="checkbox"
                         checked={checked.has(item.item_id)}
@@ -96,7 +124,9 @@ export function MouAgreementModal({ catalogName, onClose, onSuccess }: Props) {
                         {item.label}
                       </span>
                       {item.required && (
-                        <span className="text-xs text-red-500 flex-shrink-0">必須</span>
+                        <span className="text-xs text-red-500 flex-shrink-0">
+                          必須
+                        </span>
                       )}
                     </label>
                   ))}
@@ -107,7 +137,9 @@ export function MouAgreementModal({ catalogName, onClose, onSuccess }: Props) {
         </div>
 
         <div className="px-5 py-3 border-t border-gray-100 flex gap-2 justify-end">
-          <Button variant="secondary" onClick={onClose}>キャンセル</Button>
+          <Button variant="secondary" onClick={onClose}>
+            キャンセル
+          </Button>
           <Button
             variant="primary"
             disabled={!canSubmit || isLoading}
@@ -119,5 +151,5 @@ export function MouAgreementModal({ catalogName, onClose, onSuccess }: Props) {
         </div>
       </div>
     </div>
-  )
+  );
 }

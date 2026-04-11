@@ -1,63 +1,99 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useApps, useSubscribeApp, useUnsubscribeApp, useCatalogs } from '@/hooks'
-import { useUIStore } from '@/stores'
-import { Button, Badge, EmptyState, ConfirmDialog, PageHeader } from '@/components/common/ui'
-import { appsApi } from '@/api'
-import type { DataApp } from '@/types'
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  useApps,
+  useSubscribeApp,
+  useUnsubscribeApp,
+  useCatalogs,
+} from "@/hooks";
+import { useUIStore } from "@/stores";
+import {
+  Button,
+  Badge,
+  EmptyState,
+  ConfirmDialog,
+  PageHeader,
+} from "@/components/common/ui";
+import { appsApi } from "@/api";
+import type { DataApp } from "@/types";
 
 // ── App Card ──────────────────────────────────────────────────────────────────
 function AppCard({ app }: { app: DataApp }) {
-  const { addToast } = useUIStore()
-  const subscribe   = useSubscribeApp()
-  const unsubscribe = useUnsubscribeApp()
-  const [confirmSub, setConfirmSub]   = useState(false)
-  const [confirmUnsub, setConfirmUnsub] = useState(false)
+  const { addToast } = useUIStore();
+  const subscribe = useSubscribeApp();
+  const unsubscribe = useUnsubscribeApp();
+  const [confirmSub, setConfirmSub] = useState(false);
+  const [confirmUnsub, setConfirmUnsub] = useState(false);
 
   const handleRedirect = async () => {
     try {
-      const { redirect_url } = await appsApi.redirectToken(app.app_id)
-      window.location.href = redirect_url
+      const { redirect_url } = await appsApi.redirectToken(app.app_id);
+      window.location.href = redirect_url;
     } catch {
-      addToast({ type: 'error', message: 'リダイレクトに失敗しました' })
+      addToast({ type: "error", message: "リダイレクトに失敗しました" });
     }
-  }
+  };
 
   return (
-    <div className={`bg-white rounded-xl border p-4 flex flex-col gap-3 transition-colors ${
-      app.is_subscribed ? 'border-teal-200' : 'border-gray-100 hover:border-gray-200'
-    }`}>
+    <div
+      className={`bg-white rounded-xl border p-4 flex flex-col gap-3 transition-colors ${
+        app.is_subscribed
+          ? "border-teal-200"
+          : "border-gray-100 hover:border-gray-200"
+      }`}
+    >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-medium text-gray-900">{app.name}</h3>
-        <Badge variant={app.is_subscribed ? 'green' : 'gray'}>
-          {app.is_subscribed ? '利用中' : '未登録'}
+        <Badge variant={app.is_subscribed ? "green" : "gray"}>
+          {app.is_subscribed ? "利用中" : "未登録"}
         </Badge>
       </div>
 
       <p className="text-xs text-gray-500 leading-relaxed flex-1 line-clamp-3">
-        {app.description || '説明なし'}
+        {app.description || "説明なし"}
       </p>
 
       {app.used_catalogs.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {app.used_catalogs.map((c) => (
-            <span key={c} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-mono">{c}</span>
+            <span
+              key={c}
+              className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-mono"
+            >
+              {c}
+            </span>
           ))}
         </div>
       )}
 
       <div className="flex items-center justify-between pt-2 border-t border-gray-50 gap-2">
-        <span className="text-xs text-gray-400 truncate">{app.owner_user_id}</span>
+        <span className="text-xs text-gray-400 truncate">
+          {app.owner_user_id}
+        </span>
         <div className="flex gap-1.5">
           {app.is_subscribed ? (
             <>
-              <Button size="sm" variant="primary" onClick={handleRedirect}>アプリへ移動</Button>
-              <Button size="sm" variant="danger" onClick={() => setConfirmUnsub(true)}>解除</Button>
+              <Button size="sm" variant="primary" onClick={handleRedirect}>
+                アプリへ移動
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => setConfirmUnsub(true)}
+              >
+                解除
+              </Button>
             </>
           ) : (
-            <Button size="sm" variant="primary" onClick={() => setConfirmSub(true)}>使用開始</Button>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setConfirmSub(true)}
+            >
+              使用開始
+            </Button>
           )}
         </div>
       </div>
@@ -68,10 +104,16 @@ function AppCard({ app }: { app: DataApp }) {
           message="アプリのデータカタログへのアクセスが設定されます。"
           onCancel={() => setConfirmSub(false)}
           loading={subscribe.isPending}
-          onConfirm={() => subscribe.mutate(app.app_id, {
-            onSuccess: () => { setConfirmSub(false); addToast({ type: 'success', message: '使用開始しました' }) },
-            onError:   () => addToast({ type: 'error', message: '使用開始に失敗しました' }),
-          })}
+          onConfirm={() =>
+            subscribe.mutate(app.app_id, {
+              onSuccess: () => {
+                setConfirmSub(false);
+                addToast({ type: "success", message: "使用開始しました" });
+              },
+              onError: () =>
+                addToast({ type: "error", message: "使用開始に失敗しました" }),
+            })
+          }
         />
       )}
       {confirmUnsub && (
@@ -80,20 +122,26 @@ function AppCard({ app }: { app: DataApp }) {
           message="アプリへのアクセスが無効になります。"
           onCancel={() => setConfirmUnsub(false)}
           loading={unsubscribe.isPending}
-          onConfirm={() => unsubscribe.mutate(app.app_id, {
-            onSuccess: () => { setConfirmUnsub(false); addToast({ type: 'success', message: '解除しました' }) },
-            onError:   () => addToast({ type: 'error', message: '解除に失敗しました' }),
-          })}
+          onConfirm={() =>
+            unsubscribe.mutate(app.app_id, {
+              onSuccess: () => {
+                setConfirmUnsub(false);
+                addToast({ type: "success", message: "解除しました" });
+              },
+              onError: () =>
+                addToast({ type: "error", message: "解除に失敗しました" }),
+            })
+          }
         />
       )}
     </div>
-  )
+  );
 }
 
 // ── Marketplace ───────────────────────────────────────────────────────────────
 export function AppMarketplace() {
-  const [subscribed, setSubscribed] = useState(false)
-  const { data, isLoading } = useApps({ subscribed: subscribed || undefined })
+  const [subscribed, setSubscribed] = useState(false);
+  const { data, isLoading } = useApps({ subscribed: subscribed || undefined });
 
   return (
     <div className="p-6">
@@ -102,8 +150,18 @@ export function AppMarketplace() {
         description="データアプリのマーケットプレイス"
         action={
           <Button variant="primary">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             登録申請
           </Button>
@@ -114,7 +172,9 @@ export function AppMarketplace() {
         <button
           onClick={() => setSubscribed(!subscribed)}
           className={`px-3 h-8 text-xs rounded-md border transition-colors ${
-            subscribed ? 'bg-teal-600 text-white border-teal-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            subscribed
+              ? "bg-teal-600 text-white border-teal-700"
+              : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
           }`}
         >
           利用中のみ
@@ -124,41 +184,58 @@ export function AppMarketplace() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 h-40 animate-pulse" />
+            <div
+              key={i}
+              className="bg-white rounded-xl border border-gray-100 p-4 h-40 animate-pulse"
+            />
           ))}
         </div>
       ) : (data?.items ?? []).length === 0 ? (
-        <EmptyState title="アプリがありません" description="「登録申請」から新しいアプリを登録できます" />
+        <EmptyState
+          title="アプリがありません"
+          description="「登録申請」から新しいアプリを登録できます"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {(data?.items ?? []).map((app) => <AppCard key={app.app_id} app={app} />)}
+          {(data?.items ?? []).map((app) => (
+            <AppCard key={app.app_id} app={app} />
+          ))}
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ── Registration form ─────────────────────────────────────────────────────────
 const schema = z.object({
-  name:                   z.string().min(1, '必須'),
-  description:            z.string().min(1, '必須'),
-  redirect_url:           z.string().url('有効な URL を入力してください'),
-  used_catalog_names:     z.array(z.string()).min(1, '1つ以上選択してください'),
-  published_catalog_names:z.array(z.string()).optional(),
-  use_cognito:            z.boolean(),
-  cognito_user_pool_arn:  z.string().optional(),
-  cognito_region:         z.string().optional(),
-})
-type FormValues = z.infer<typeof schema>
+  name: z.string().min(1, "必須"),
+  description: z.string().min(1, "必須"),
+  redirect_url: z.string().url("有効な URL を入力してください"),
+  used_catalog_names: z.array(z.string()).min(1, "1つ以上選択してください"),
+  published_catalog_names: z.array(z.string()).optional(),
+  use_cognito: z.boolean(),
+  cognito_user_pool_arn: z.string().optional(),
+  cognito_region: z.string().optional(),
+});
+type FormValues = z.infer<typeof schema>;
 
 export function AppRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
-  const { addToast } = useUIStore()
-  const { data: catalogs } = useCatalogs()
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const { addToast } = useUIStore();
+  const { data: catalogs } = useCatalogs();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { use_cognito: false, used_catalog_names: [], published_catalog_names: [] },
-  })
-  const useCognito = watch('use_cognito')
+    defaultValues: {
+      use_cognito: false,
+      used_catalog_names: [],
+      published_catalog_names: [],
+    },
+  });
+  const useCognito = watch("use_cognito");
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -172,58 +249,91 @@ export function AppRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
           cognito_user_pool_arn: values.cognito_user_pool_arn,
           cognito_region: values.cognito_region,
         }),
-      })
-      addToast({ type: 'success', message: 'アプリを登録しました' })
-      onSuccess()
+      });
+      addToast({ type: "success", message: "アプリを登録しました" });
+      onSuccess();
     } catch {
-      addToast({ type: 'error', message: '登録に失敗しました' })
+      addToast({ type: "error", message: "登録に失敗しました" });
     }
-  }
+  };
 
-  const inputCls = 'w-full h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400'
-  const errCls = 'text-xs text-red-500 mt-0.5'
-  const labelCls = 'block text-xs font-medium text-gray-700 mb-1'
+  const inputCls =
+    "w-full h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400";
+  const errCls = "text-xs text-red-500 mt-0.5";
+  const labelCls = "block text-xs font-medium text-gray-700 mb-1";
 
   return (
     <div className="p-6">
       <PageHeader title="データアプリ登録申請" />
       <form onSubmit={handleSubmit(onSubmit)} className="max-w-lg space-y-4">
         <div>
-          <label className={labelCls}>アプリ名 <span className="text-red-500">*</span></label>
-          <input {...register('name')} className={inputCls} />
+          <label className={labelCls}>
+            アプリ名 <span className="text-red-500">*</span>
+          </label>
+          <input {...register("name")} className={inputCls} />
           {errors.name && <p className={errCls}>{errors.name.message}</p>}
         </div>
 
         <div>
-          <label className={labelCls}>説明 <span className="text-red-500">*</span></label>
-          <textarea {...register('description')} rows={3}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400 resize-none" />
-          {errors.description && <p className={errCls}>{errors.description.message}</p>}
+          <label className={labelCls}>
+            説明 <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            {...register("description")}
+            rows={3}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400 resize-none"
+          />
+          {errors.description && (
+            <p className={errCls}>{errors.description.message}</p>
+          )}
         </div>
 
         <div>
-          <label className={labelCls}>遷移先 URL <span className="text-red-500">*</span></label>
-          <input {...register('redirect_url')} className={inputCls} placeholder="https://app.example.com" />
-          {errors.redirect_url && <p className={errCls}>{errors.redirect_url.message}</p>}
+          <label className={labelCls}>
+            遷移先 URL <span className="text-red-500">*</span>
+          </label>
+          <input
+            {...register("redirect_url")}
+            className={inputCls}
+            placeholder="https://app.example.com"
+          />
+          {errors.redirect_url && (
+            <p className={errCls}>{errors.redirect_url.message}</p>
+          )}
         </div>
 
         <div>
-          <label className={labelCls}>使用カタログ <span className="text-red-500">*</span></label>
+          <label className={labelCls}>
+            使用カタログ <span className="text-red-500">*</span>
+          </label>
           <div className="space-y-1 max-h-36 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
             {(catalogs?.items ?? []).map((c) => (
-              <label key={c.catalog_name} className="flex items-center gap-2 text-xs cursor-pointer">
-                <input type="checkbox" value={c.catalog_name} {...register('used_catalog_names')}
-                  className="rounded border-gray-300 text-teal-600" />
+              <label
+                key={c.catalog_name}
+                className="flex items-center gap-2 text-xs cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  value={c.catalog_name}
+                  {...register("used_catalog_names")}
+                  className="rounded border-gray-300 text-teal-600"
+                />
                 <span className="font-mono">{c.catalog_name}</span>
               </label>
             ))}
           </div>
-          {errors.used_catalog_names && <p className={errCls}>{errors.used_catalog_names.message}</p>}
+          {errors.used_catalog_names && (
+            <p className={errCls}>{errors.used_catalog_names.message}</p>
+          )}
         </div>
 
         <div>
           <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
-            <input type="checkbox" {...register('use_cognito')} className="rounded border-gray-300 text-teal-600" />
+            <input
+              type="checkbox"
+              {...register("use_cognito")}
+              className="rounded border-gray-300 text-teal-600"
+            />
             Cognito 連携を使用する（自動ユーザー登録）
           </label>
         </div>
@@ -232,21 +342,32 @@ export function AppRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
           <div className="space-y-3 pl-4 border-l-2 border-teal-200">
             <div>
               <label className={labelCls}>Cognito User Pool ARN</label>
-              <input {...register('cognito_user_pool_arn')} className={inputCls}
-                placeholder="arn:aws:cognito-idp:ap-northeast-1:123456789:userpool/..." />
+              <input
+                {...register("cognito_user_pool_arn")}
+                className={inputCls}
+                placeholder="arn:aws:cognito-idp:ap-northeast-1:123456789:userpool/..."
+              />
             </div>
             <div>
               <label className={labelCls}>リージョン</label>
-              <input {...register('cognito_region')} className={inputCls} placeholder="ap-northeast-1" />
+              <input
+                {...register("cognito_region")}
+                className={inputCls}
+                placeholder="ap-northeast-1"
+              />
             </div>
           </div>
         )}
 
         <div className="flex gap-2 pt-2">
-          <Button type="submit" variant="primary" loading={isSubmitting}>登録する</Button>
-          <Button type="button" variant="secondary" onClick={onSuccess}>キャンセル</Button>
+          <Button type="submit" variant="primary" loading={isSubmitting}>
+            登録する
+          </Button>
+          <Button type="button" variant="secondary" onClick={onSuccess}>
+            キャンセル
+          </Button>
         </div>
       </form>
     </div>
-  )
+  );
 }

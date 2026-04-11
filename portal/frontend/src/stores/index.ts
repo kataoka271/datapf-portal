@@ -1,14 +1,14 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import type { CurrentUser, Region } from '@/types'
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { CurrentUser, Region } from "@/types";
 
 // ── Auth Store ────────────────────────────────────────────────────────────────
 interface AuthState {
-  user: CurrentUser | null
-  token: string | null
-  setUser: (user: CurrentUser | null) => void
-  setToken: (token: string | null) => void
-  clear: () => void
+  user: CurrentUser | null;
+  token: string | null;
+  setUser: (user: CurrentUser | null) => void;
+  setToken: (token: string | null) => void;
+  clear: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -20,23 +20,23 @@ export const useAuthStore = create<AuthState>()(
       setToken: (token) => set({ token }),
       clear: () => set({ user: null, token: null }),
     }),
-    { name: 'auth-store', partialize: (s) => ({ token: s.token }) },
+    { name: "auth-store", partialize: (s) => ({ token: s.token }) },
   ),
-)
+);
 
 // ── UI Store ──────────────────────────────────────────────────────────────────
 interface Toast {
-  id: string
-  type: 'success' | 'error' | 'info'
-  message: string
+  id: string;
+  type: "success" | "error" | "info";
+  message: string;
 }
 
 interface UIState {
-  sidebarOpen: boolean
-  toasts: Toast[]
-  setSidebarOpen: (v: boolean) => void
-  addToast: (t: Omit<Toast, 'id'>) => void
-  removeToast: (id: string) => void
+  sidebarOpen: boolean;
+  toasts: Toast[];
+  setSidebarOpen: (v: boolean) => void;
+  addToast: (t: Omit<Toast, "id">) => void;
+  removeToast: (id: string) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -47,24 +47,25 @@ export const useUIStore = create<UIState>((set) => ({
     set((s) => ({
       toasts: [...s.toasts, { ...t, id: crypto.randomUUID() }],
     })),
-  removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-}))
+  removeToast: (id) =>
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+}));
 
 // ── Analysis Store ────────────────────────────────────────────────────────────
 interface AnalysisState {
-  region: Region
-  atTime: string
-  selectedVehicleId: string | null
-  selectedColumns: string[]
-  setRegion: (r: Region) => void
-  setAtTime: (t: string) => void
-  setSelectedVehicleId: (id: string | null) => void
-  toggleColumn: (col: string) => void
-  clearColumns: () => void
+  region: Region;
+  atTime: string;
+  selectedVehicleId: string | null;
+  selectedColumns: string[];
+  setRegion: (r: Region) => void;
+  setAtTime: (t: string) => void;
+  setSelectedVehicleId: (id: string | null) => void;
+  toggleColumn: (col: string) => void;
+  clearColumns: () => void;
 }
 
 export const useAnalysisStore = create<AnalysisState>((set) => ({
-  region: 'japan',
+  region: "japan",
   atTime: new Date().toISOString().slice(0, 16),
   selectedVehicleId: null,
   selectedColumns: [],
@@ -78,4 +79,4 @@ export const useAnalysisStore = create<AnalysisState>((set) => ({
         : [...s.selectedColumns, col],
     })),
   clearColumns: () => set({ selectedColumns: [] }),
-}))
+}));
