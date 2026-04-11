@@ -69,10 +69,17 @@ const NAV = [
 // ── Header ────────────────────────────────────────────────────────────────────
 function Header() {
   const user = useAuthStore((s) => s.user);
+  const clearAuth = useAuthStore((s) => s.clear);
   const { sidebarOpen, setSidebarOpen } = useUIStore();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { data: notifs } = useNotifications({ is_read: false, limit: 10 });
   const markAll = useMarkAllRead();
+
+  const handleLogout = () => {
+    clearAuth();
+    window.location.href = "/";
+  };
 
   return (
     <header className="h-14 bg-[#0C2340] flex items-center px-4 gap-3 flex-shrink-0">
@@ -173,17 +180,60 @@ function Header() {
         )}
       </div>
 
-      {/* User */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-white/80 hidden sm:block">
-          {user?.display_name ?? ""}
-        </span>
-        <div
-          className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-          title={user?.display_name ?? ""}
+      {/* User menu */}
+      <div className="relative">
+        <button
+          onClick={() => setUserMenuOpen(!userMenuOpen)}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
-          {user?.display_name?.slice(0, 2).toUpperCase() ?? "US"}
-        </div>
+          <span className="text-sm text-white/80 hidden sm:block">
+            {user?.display_name ?? ""}
+          </span>
+          <div
+            className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+            title={user?.display_name ?? ""}
+          >
+            {user?.display_name?.slice(0, 2).toUpperCase() ?? "US"}
+          </div>
+        </button>
+
+        {userMenuOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setUserMenuOpen(false)}
+            />
+            <div className="absolute right-0 top-10 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user?.display_name ?? ""}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.email ?? ""}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                ログアウト
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </header>
   );
