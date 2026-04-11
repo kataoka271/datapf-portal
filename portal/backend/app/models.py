@@ -178,7 +178,22 @@ class CreateAppRequest(BaseModel):
     cognito_region: Optional[str] = None
 
 
+class UpdateAppRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    redirect_url: Optional[str] = None
+    used_catalog_names: Optional[list[str]] = None
+    published_catalog_names: Optional[list[str]] = None
+
+
 # ── Notifications ─────────────────────────────────────────────────────────────
+class SendNotificationRequest(BaseModel):
+    title: str
+    body: str
+    target_user_ids: Optional[list[str]] = None  # None means broadcast
+    send_email: bool = False
+
+
 class NotificationItem(BaseModel):
     notification_id: str
     type: str

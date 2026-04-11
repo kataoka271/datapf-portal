@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -7,6 +9,22 @@ from app.config import get_settings
 from app.models import CatalogRole, CurrentUser
 
 security = HTTPBearer(auto_error=False)
+
+# JWKS cache — avoids an HTTP round-trip on every request
+_jwks_cache: dict = {"data": None, "fetched_at": 0.0}
+_JWKS_TTL = 300  # 5 minutes
+
+
+def _get_jwks(jwks_uri: str) -> dict:
+    now = time.monotonic()
+    if _jwks_cache["data"] is None or now - _jwks_cache["fetched_at"] > _JWKS_TTL:
+        import httpx
+
+        resp = httpx.get(jwks_uri, timeout=5)
+        resp.raise_for_status()
+        _jwks_cache["data"] = resp.json()
+        _jwks_cache["fetched_at"] = now
+    return _jwks_cache["data"]
 
 
 async def get_current_user(
@@ -35,25 +53,27 @@ async def get_current_user(
 
     # Production token verification (IAM Identity Center JWKS)
     try:
-        import httpx
         from jose import jwt
 
-        jwks_resp = httpx.get(settings.oidc_jwks_uri, timeout=5)
-        jwks_resp.raise_for_status()
-        jwks = jwks_resp.json()
+        from app.services import databricks as db_svc
 
+        jwks = _get_jwks(settings.oidc_jwks_uri)
         payload = jwt.decode(
             credentials.credentials,
             jwks,
             algorithms=["RS256"],
             audience=settings.oidc_audience,
         )
+        email = payload.get("email", "")
+        catalog_roles = [
+            CatalogRole(**r) for r in db_svc.get_user_catalog_roles(email)
+        ]
         return CurrentUser(
             user_id=payload.get("sub", ""),
-            email=payload.get("email", ""),
-            display_name=payload.get("name", payload.get("email", "")),
+            email=email,
+            display_name=payload.get("name", email),
             is_admin=False,
-            catalog_roles=[],
+            catalog_roles=catalog_roles,
         )
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))

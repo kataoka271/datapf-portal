@@ -87,6 +87,15 @@ def revoke_catalog_viewer(catalog_name: str, user_id: str) -> None:
     _modify_group_member(f"catalog-viewer-{catalog_name}", user_id, add=False)
 
 
+def grant_catalog_editor(catalog_name: str, user_id: str) -> None:
+    """Add user to catalog-editor-{catalog_name} Databricks group."""
+    _modify_group_member(f"catalog-editor-{catalog_name}", user_id, add=True)
+
+
+def revoke_catalog_editor(catalog_name: str, user_id: str) -> None:
+    _modify_group_member(f"catalog-editor-{catalog_name}", user_id, add=False)
+
+
 def _modify_group_member(group_name: str, user_id: str, add: bool) -> None:
     settings = get_settings()
     if settings.dev_mode:
@@ -129,6 +138,7 @@ def create_unity_catalog(catalog_name: str, owner_user_id: str) -> None:
         return
     try:
         from databricks.sdk import WorkspaceClient
+        from databricks.sdk.service.catalog import PermissionsChange, Privilege, SecurableType
 
         w = WorkspaceClient(
             host=settings.databricks_host,
@@ -136,8 +146,119 @@ def create_unity_catalog(catalog_name: str, owner_user_id: str) -> None:
             client_secret=settings.databricks_sp_client_secret,
         )
         w.catalogs.create(name=catalog_name, comment=f"Created by portal for {owner_user_id}")
+
+        # Create owner group if it doesn't exist
+        owner_group_name = f"catalog-owner-{catalog_name}"
+        groups = list(w.groups.list(filter=f'displayName eq "{owner_group_name}"'))
+        if not groups:
+            w.groups.create(display_name=owner_group_name)
+            groups = list(w.groups.list(filter=f'displayName eq "{owner_group_name}"'))
+        if groups:
+            w.groups.patch(
+                groups[0].id,
+                operations=[{"op": "add", "path": "members", "value": [{"value": owner_user_id}]}],
+                schemas=["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            )
+
+        # Grant ALL PRIVILEGES on the catalog to the owner group
+        w.grants.update(
+            full_name=catalog_name,
+            securable_type=SecurableType.CATALOG,
+            changes=[PermissionsChange(
+                add=[Privilege.ALL_PRIVILEGES],
+                principal=owner_group_name,
+            )],
+        )
     except Exception:
         pass
+
+
+def get_catalog_members(catalog_name: str) -> list[dict[str, Any]]:
+    """List catalog members by querying Databricks group membership."""
+    settings = get_settings()
+    if settings.dev_mode:
+        return []
+    try:
+        from datetime import datetime, timezone
+
+        from databricks.sdk import WorkspaceClient
+
+        w = WorkspaceClient(
+            host=settings.databricks_host,
+            client_id=settings.databricks_sp_client_id,
+            client_secret=settings.databricks_sp_client_secret,
+        )
+        members: list[dict[str, Any]] = []
+        for role in ("owner", "editor", "viewer"):
+            group_name = f"catalog-{role}-{catalog_name}"
+            groups = list(w.groups.list(filter=f'displayName eq "{group_name}"', attributes="id,members"))
+            if not groups or not groups[0].members:
+                continue
+            for m in groups[0].members:
+                try:
+                    user_info = w.users.get(m.value)
+                    email = user_info.emails[0].value if user_info.emails else ""
+                    members.append({
+                        "user_id": m.value,
+                        "email": email,
+                        "display_name": user_info.display_name or email,
+                        "role": role,
+                        "approved_at": datetime.now(timezone.utc).isoformat(),
+                    })
+                except Exception:
+                    pass
+        return members
+    except Exception:
+        return []
+
+
+def get_user_email(user_id: str) -> str | None:
+    """Look up a user's email by their Databricks user ID."""
+    settings = get_settings()
+    if settings.dev_mode:
+        return None
+    try:
+        from databricks.sdk import WorkspaceClient
+
+        w = WorkspaceClient(
+            host=settings.databricks_host,
+            client_id=settings.databricks_sp_client_id,
+            client_secret=settings.databricks_sp_client_secret,
+        )
+        user_info = w.users.get(user_id)
+        return user_info.emails[0].value if user_info.emails else None
+    except Exception:
+        return None
+
+
+def get_user_catalog_roles(email: str) -> list[dict[str, str]]:
+    """Get catalog roles for a user by checking their Databricks group membership."""
+    settings = get_settings()
+    if settings.dev_mode:
+        return []
+    try:
+        from databricks.sdk import WorkspaceClient
+
+        w = WorkspaceClient(
+            host=settings.databricks_host,
+            client_id=settings.databricks_sp_client_id,
+            client_secret=settings.databricks_sp_client_secret,
+        )
+        users = list(w.users.list(filter=f'emails.value eq "{email}"', attributes="id"))
+        if not users:
+            return []
+        user_obj = w.users.get(users[0].id, attributes="groups")
+        roles: list[dict[str, str]] = []
+        for grp in (user_obj.groups or []):
+            name = grp.display
+            if not name or not name.startswith("catalog-"):
+                continue
+            parts = name.split("-", 2)  # catalog-{role}-{catalog_name}
+            if len(parts) == 3 and parts[1] in ("owner", "editor", "viewer"):
+                roles.append({"catalog_name": parts[2], "role": parts[1]})
+        return roles
+    except Exception:
+        return []
 
 
 # ── S3 presigned URL ──────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import type {
   DataApp, NotificationsResponse,
   VehiclePoint, VehicleStatus, TimeseriesSeries, VideoInfo,
   StatResult, QualityAlert, PaginatedResponse, Region,
-  MatchedColumn,
+  MatchedColumn, AdminUser,
 } from '@/types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? '/v1'
@@ -116,6 +116,10 @@ export const appsApi = {
     used_catalog_names: string[]; published_catalog_names?: string[]
     cognito_user_pool_arn?: string; cognito_region?: string
   }) => post<{ app_id: string; status: string }>('/apps', body),
+  update: (id: string, body: {
+    name?: string; description?: string; redirect_url?: string
+    used_catalog_names?: string[]; published_catalog_names?: string[]
+  }) => put<{ app_id: string; status: string }>(`/apps/${id}`, body),
   subscribe: (id: string) => post<{ app_id: string; status: string; cognito_provisioned: boolean }>(`/apps/${id}/subscriptions`, {}),
   unsubscribe: (id: string) => del<{ deleted: boolean }>(`/apps/${id}/subscriptions`),
   redirectToken: (id: string) => post<{ redirect_url: string; expires_in: number }>(`/apps/${id}/redirect-token`, {}),
@@ -150,6 +154,13 @@ export const alertsApi = {
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 export const adminApi = {
+  listUsers: (params?: { q?: string; limit?: number; offset?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.q) q.set('q', params.q)
+    if (params?.limit) q.set('limit', String(params.limit))
+    if (params?.offset) q.set('offset', String(params.offset))
+    return get<PaginatedResponse<AdminUser>>(`/admin/users${q.size ? '?' + q : ''}`)
+  },
   sendNotification: (body: { title: string; body: string; target_user_ids?: string[]; send_email?: boolean }) =>
     post<{ notification_ids: string[]; recipient_count: number }>('/admin/notifications', body),
 }

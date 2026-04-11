@@ -114,7 +114,6 @@ export type NotificationType =
   | 'ACCESS_REQUEST'
   | 'APPROVAL'
   | 'REJECTION'
-  | 'REVOCATION'
   | 'QUALITY_ALERT'
   | 'SYSTEM_MESSAGE'
 
@@ -170,6 +169,7 @@ export interface TimeseriesSeries {
 
 export interface VideoInfo {
   vehicle_id: string
+  video_key: string
   presigned_url: string
   expires_at: string
   duration_sec: number
@@ -207,6 +207,16 @@ export interface QualityAlert {
   detail_message: string | null
   triggered_at: string
   resolved_at: string | null
+}
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+export interface AdminUser {
+  user_id: string
+  email: string
+  display_name: string
+  is_admin: boolean
+  catalog_count: number
+  last_login_at: string
 }
 
 // ── Pagination ────────────────────────────────────────────────────────────────
