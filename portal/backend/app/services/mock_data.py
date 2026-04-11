@@ -372,6 +372,15 @@ def mock_apps() -> list[dict]:
             "is_subscribed": False,
             "redirect_url": None,
         },
+        {
+            "app_id": "app-003",
+            "name": "FaultScan",
+            "description": "故障診断データをもとにリアルタイムで異常を検知・アラート通知するアプリ。vehicle_timeseries / fault_diagnostics カタログを使用。",
+            "owner_user_id": "dev-user-001",
+            "used_catalogs": ["vehicle_timeseries", "fault_diagnostics"],
+            "is_subscribed": True,
+            "redirect_url": "https://faultscan.example.com",
+        },
     ]
 
 

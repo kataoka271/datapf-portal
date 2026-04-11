@@ -8,7 +8,7 @@ import {
   useUnsubscribeApp,
   useCatalogs,
 } from "@/hooks";
-import { useUIStore } from "@/stores";
+import { useUIStore, useAuthStore } from "@/stores";
 import {
   Button,
   Badge,
@@ -22,10 +22,13 @@ import type { DataApp } from "@/types";
 // ── App Card ──────────────────────────────────────────────────────────────────
 function AppCard({ app }: { app: DataApp }) {
   const { addToast } = useUIStore();
+  const user = useAuthStore((s) => s.user);
   const subscribe = useSubscribeApp();
   const unsubscribe = useUnsubscribeApp();
   const [confirmSub, setConfirmSub] = useState(false);
   const [confirmUnsub, setConfirmUnsub] = useState(false);
+
+  const isOwner = app.owner_user_id === user?.user_id;
 
   const handleRedirect = async () => {
     try {
@@ -46,9 +49,12 @@ function AppCard({ app }: { app: DataApp }) {
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-medium text-gray-900">{app.name}</h3>
-        <Badge variant={app.is_subscribed ? "green" : "gray"}>
-          {app.is_subscribed ? "利用中" : "未登録"}
-        </Badge>
+        <div className="flex gap-1.5 flex-shrink-0">
+          {isOwner && <Badge variant="purple">オーナー</Badge>}
+          <Badge variant={app.is_subscribed ? "green" : "gray"}>
+            {app.is_subscribed ? "利用中" : "未登録"}
+          </Badge>
+        </div>
       </div>
 
       <p className="text-xs text-gray-500 leading-relaxed flex-1 line-clamp-3">
