@@ -13,17 +13,17 @@ import { NotificationList, AlertList } from './components/notifications/Notifica
 import { useAuthStore } from './stores'
 
 // ── Root ──────────────────────────────────────────────────────────────────────
-const rootRoute = createRootRoute({
-  component: () => {
-    const token = useAuthStore((s) => s.token)
-    if (!token) return <LoginPage />
-    return (
-      <AppShell>
-        <Outlet />
-      </AppShell>
-    )
-  },
-})
+function RootComponent() {
+  const token = useAuthStore((s) => s.token)
+  if (!token) return <LoginPage />
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  )
+}
+
+const rootRoute = createRootRoute({ component: RootComponent })
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 function LoginPage() {

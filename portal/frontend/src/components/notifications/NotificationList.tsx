@@ -6,7 +6,7 @@ import { useCurrentUser } from '@/hooks'
 // ── Notifications list ────────────────────────────────────────────────────────
 export function NotificationList() {
   const [unreadOnly, setUnreadOnly] = useState(false)
-  const { data, isLoading, fetchNextPage, hasNextPage } = useNotifications({ is_read: unreadOnly ? false : undefined })
+  const { data, isLoading } = useNotifications({ is_read: unreadOnly ? false : undefined })
   const markRead  = useMarkRead()
   const markAll   = useMarkAllRead()
 

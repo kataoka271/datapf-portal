@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BoxPlot,
+  ResponsiveContainer,
 } from 'recharts'
 import { useStatistics, useCrossSearch } from '@/hooks'
 import { useUIStore } from '@/stores'
-import { Button, Spinner, EmptyState, PageHeader, Badge } from '@/components/common/ui'
+import { Button, Spinner, EmptyState, PageHeader } from '@/components/common/ui'
 import type { Region, StatResult, MatchedColumn } from '@/types'
 
 const REGION_OPTIONS: { value: Region; label: string }[] = [

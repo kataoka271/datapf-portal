@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useApps, useSubscribeApp, useUnsubscribeApp, useCatalogs } from '@/hooks'
 import { useUIStore } from '@/stores'
-import { Button, Badge, Spinner, EmptyState, ConfirmDialog, PageHeader } from '@/components/common/ui'
+import { Button, Badge, EmptyState, ConfirmDialog, PageHeader } from '@/components/common/ui'
 import { appsApi } from '@/api'
 import type { DataApp } from '@/types'
 

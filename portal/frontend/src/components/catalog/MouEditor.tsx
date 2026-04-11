@@ -15,12 +15,14 @@ export function MouEditor({ catalogName }: { catalogName: string }) {
   const [preview, setPreview]     = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (mou) {
       setMouText(mou.mou_text)
       setChecklist(mou.checklist.map((i) => ({ label: i.label, required: i.required })))
     }
   }, [mou])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const addItem = () => setChecklist((p) => [...p, { label: '', required: false }])
   const removeItem = (i: number) => setChecklist((p) => p.filter((_, j) => j !== i))

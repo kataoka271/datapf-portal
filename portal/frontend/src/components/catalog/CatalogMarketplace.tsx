@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useDebounce } from '@/hooks/useDebounce'
-import { useCatalogs, useCreateAccessRequest, useRevokeAccess } from '@/hooks'
+import { useCatalogs, useRevokeAccess } from '@/hooks'
 import { useUIStore } from '@/stores'
 import { Button, Badge, Skeleton, EmptyState, ConfirmDialog, PageHeader } from '@/components/common/ui'
 import { MouAgreementModal } from './MouAgreementModal'
@@ -12,7 +12,6 @@ function CatalogCard({ catalog, onApply }: { catalog: Catalog; onApply: (c: Cata
   const [confirmRevoke, setConfirmRevoke] = useState(false)
 
   const isOwner = catalog.my_role === 'owner' || catalog.my_role === 'editor'
-  const isViewer = catalog.my_role === 'viewer'
   const isPending = catalog.my_request_status === 'PENDING'
   const isApproved = catalog.my_request_status === 'APPROVED'
 

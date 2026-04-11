@@ -26,7 +26,7 @@ function VehicleMap({ vehicles, selectedId, onSelect }: {
       </div>
       {/* Placeholder dots for prototype — replace with actual deck.gl DeckGL component */}
       <svg className="absolute inset-0 w-full h-full">
-        {vehicles.map((v, i) => {
+        {vehicles.map((v, _i) => {
           const x = ((v.longitude - 130) / 15) * 100
           const y = ((50 - v.latitude) / 15) * 100
           const isSelected = v.vehicle_id === selectedId

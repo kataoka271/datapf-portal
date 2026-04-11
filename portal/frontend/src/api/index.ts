@@ -1,7 +1,7 @@
 import type {
   CurrentUser, Catalog, CatalogDetail, MouDefinition,
   CatalogMember, AccessRequest, SearchResult, SavedView,
-  DataApp, Notification, NotificationsResponse,
+  DataApp, NotificationsResponse,
   VehiclePoint, VehicleStatus, TimeseriesSeries, VideoInfo,
   StatResult, QualityAlert, PaginatedResponse, Region,
   MatchedColumn,
