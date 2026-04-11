@@ -9,10 +9,7 @@ const schema = z.object({
   catalog_name: z
     .string()
     .min(1, "必須です")
-    .regex(
-      /^[a-zA-Z0-9_]+$/,
-      "英数字とアンダースコアのみ使用できます",
-    ),
+    .regex(/^[a-zA-Z0-9_]+$/, "英数字とアンダースコアのみ使用できます"),
   display_name: z.string().min(1, "必須です"),
   description: z.string(),
   requires_approval: z.boolean(),
@@ -46,7 +43,10 @@ export function CatalogCreateModal({ onClose, onSuccess }: Props) {
   const onSubmit = (values: FormValues) => {
     create.mutate(values, {
       onSuccess: () => {
-        addToast({ type: "success", message: "カタログ作成申請を送信しました" });
+        addToast({
+          type: "success",
+          message: "カタログ作成申請を送信しました",
+        });
         onSuccess();
       },
       onError: () =>
@@ -124,7 +124,9 @@ export function CatalogCreateModal({ onClose, onSuccess }: Props) {
               className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
             />
             <div>
-              <span className="text-sm text-gray-700">承認フローを有効にする</span>
+              <span className="text-sm text-gray-700">
+                承認フローを有効にする
+              </span>
               <p className="text-xs text-gray-400 mt-0.5">
                 有効にすると、閲覧申請はデータオーナーの承認を得るまで PENDING
                 のままになります
@@ -136,11 +138,7 @@ export function CatalogCreateModal({ onClose, onSuccess }: Props) {
             <Button variant="secondary" type="button" onClick={onClose}>
               キャンセル
             </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              loading={create.isPending}
-            >
+            <Button variant="primary" type="submit" loading={create.isPending}>
               作成申請
             </Button>
           </div>

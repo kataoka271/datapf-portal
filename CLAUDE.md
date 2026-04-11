@@ -72,6 +72,7 @@ uv run ruff format  # format python
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint src
+npm run format      # prettier src
 ```
 
 **Backend tests (from `portal/backend/`)**
