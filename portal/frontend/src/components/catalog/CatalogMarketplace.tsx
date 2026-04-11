@@ -11,6 +11,7 @@ import {
   PageHeader,
 } from "@/components/common/ui";
 import { MouAgreementModal } from "./MouAgreementModal";
+import { CatalogCreateModal } from "./CatalogCreateModal";
 import type { Catalog } from "@/types";
 
 function CatalogCard({
@@ -129,6 +130,7 @@ export function CatalogMarketplace() {
   const [rawQuery, setRawQuery] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [applyTarget, setApplyTarget] = useState<Catalog | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const query = useDebounce(rawQuery, 300);
   const { data, isLoading } = useCatalogs({
     q: query || undefined,
@@ -141,7 +143,7 @@ export function CatalogMarketplace() {
         title="データカタログ"
         description="利用可能なカタログを検索・申請できます"
         action={
-          <Button variant="primary">
+          <Button variant="primary" onClick={() => setShowCreateModal(true)}>
             <svg
               className="w-4 h-4"
               fill="none"
@@ -217,6 +219,13 @@ export function CatalogMarketplace() {
           onSuccess={() => {
             setApplyTarget(null);
           }}
+        />
+      )}
+
+      {showCreateModal && (
+        <CatalogCreateModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => setShowCreateModal(false)}
         />
       )}
     </div>

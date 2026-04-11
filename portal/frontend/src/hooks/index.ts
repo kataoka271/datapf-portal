@@ -201,6 +201,19 @@ export function useUpdateMember() {
   });
 }
 
+export function useCreateCatalog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      catalog_name: string;
+      display_name: string;
+      description: string;
+      requires_approval: boolean;
+    }) => catalogsApi.create(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["catalogs"] }),
+  });
+}
+
 export function useCrossSearch() {
   return useMutation({
     mutationFn: catalogsApi.search,

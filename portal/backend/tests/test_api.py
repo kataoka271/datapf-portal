@@ -61,6 +61,35 @@ def test_list_catalogs():
     assert "my_role" in item
 
 
+def test_create_catalog():
+    res = client.post(
+        "/v1/catalogs",
+        json={
+            "catalog_name": "my_test_catalog",
+            "display_name": "テストカタログ",
+            "description": "説明文",
+            "requires_approval": False,
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["catalog_name"] == "my_test_catalog"
+    assert data["status"] == "CREATED"
+
+
+def test_create_catalog_invalid_name():
+    res = client.post(
+        "/v1/catalogs",
+        json={
+            "catalog_name": "invalid-name!",
+            "display_name": "テスト",
+            "description": "",
+            "requires_approval": False,
+        },
+    )
+    assert res.status_code == 422
+
+
 def test_list_catalogs_search():
     res = client.get("/v1/catalogs?q=vehicle")
     assert res.status_code == 200
