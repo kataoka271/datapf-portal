@@ -200,13 +200,13 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   # /health エンドポイントも API にルーティング
   ordered_cache_behavior {
-    path_pattern           = "/health"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "APIGateway"
-    viewer_protocol_policy = "https-only"
-    compress               = true
-    cache_policy_id        = data.aws_cloudfront_cache_policy.no_cache.id
+    path_pattern             = "/health"
+    allowed_methods          = ["GET", "HEAD"]
+    cached_methods           = ["GET", "HEAD"]
+    target_origin_id         = "APIGateway"
+    viewer_protocol_policy   = "https-only"
+    compress                 = true
+    cache_policy_id          = data.aws_cloudfront_cache_policy.no_cache.id
     origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
   }
 
@@ -254,8 +254,8 @@ resource "aws_cloudfront_cache_policy" "static" {
   min_ttl     = 0
 
   parameters_in_cache_key_and_forwarded_to_origin {
-    cookies_config  { cookie_behavior = "none" }
-    headers_config  { header_behavior = "none" }
+    cookies_config { cookie_behavior = "none" }
+    headers_config { header_behavior = "none" }
     query_strings_config { query_string_behavior = "none" }
     enable_accept_encoding_brotli = true
     enable_accept_encoding_gzip   = true

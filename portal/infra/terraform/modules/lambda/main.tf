@@ -37,23 +37,23 @@ resource "aws_lambda_function" "api" {
   environment {
     variables = {
       # アプリ設定
-      PORTAL_CATALOG   = var.portal_catalog
-      AWS_SES_SENDER   = var.ses_sender_email
-      S3_VIDEO_BUCKET  = var.video_bucket_name
-      AWS_REGION_NAME  = var.aws_region   # boto3 用（AWS_REGION は予約済み）
+      PORTAL_CATALOG  = var.portal_catalog
+      AWS_SES_SENDER  = var.ses_sender_email
+      S3_VIDEO_BUCKET = var.video_bucket_name
+      AWS_REGION_NAME = var.aws_region # boto3 用（AWS_REGION は予約済み）
 
       # Secrets Manager シークレット名（起動時に参照）
-      SECRET_NAME      = var.databricks_secret_name
+      SECRET_NAME = var.databricks_secret_name
 
       # モード
-      DEV_MODE         = tostring(var.dev_mode)
+      DEV_MODE = tostring(var.dev_mode)
 
       # CORS 許可オリジン
-      ALLOWED_ORIGINS  = join(",", var.allowed_origins)
+      ALLOWED_ORIGINS = join(",", var.allowed_origins)
 
       # PowerTools（ログ・トレーシング）
-      POWERTOOLS_SERVICE_NAME    = "${var.prefix}-api"
-      POWERTOOLS_LOG_LEVEL       = var.log_level
+      POWERTOOLS_SERVICE_NAME     = "${var.prefix}-api"
+      POWERTOOLS_LOG_LEVEL        = var.log_level
       POWERTOOLS_LOGGER_LOG_EVENT = "false"
     }
   }
@@ -157,8 +157,8 @@ resource "aws_cloudwatch_metric_alarm" "error_rate" {
     }
   }
 
-  alarm_actions = var.alarm_sns_arn != "" ? [var.alarm_sns_arn] : []
-  ok_actions    = var.alarm_sns_arn != "" ? [var.alarm_sns_arn] : []
+  alarm_actions      = var.alarm_sns_arn != "" ? [var.alarm_sns_arn] : []
+  ok_actions         = var.alarm_sns_arn != "" ? [var.alarm_sns_arn] : []
   treat_missing_data = "notBreaching"
 
   tags = var.tags

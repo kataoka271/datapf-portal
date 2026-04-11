@@ -17,7 +17,7 @@ terraform {
   backend "s3" {
     bucket         = "portal-terraform-state-dev"
     key            = "portal/dev/terraform.tfstate"
-    region         = "ap-northeast-1"
+    region         = "us-east-1"
     encrypt        = true
     dynamodb_table = "portal-terraform-lock"
   }
@@ -75,7 +75,7 @@ module "secrets" {
   source = "../../modules/secrets"
 
   prefix                      = local.prefix
-  recovery_window_days        = 0  # dev: 即時削除可能
+  recovery_window_days        = 0 # dev: 即時削除可能
   databricks_host             = var.databricks_host
   databricks_sp_client_id     = var.databricks_sp_client_id
   databricks_sp_client_secret = var.databricks_sp_client_secret
@@ -99,7 +99,7 @@ module "s3_cloudfront" {
   custom_domain        = var.custom_domain
   acm_certificate_arn  = var.acm_certificate_arn
   route53_zone_id      = var.route53_zone_id
-  video_retention_days = 180  # dev: 180日で自動削除
+  video_retention_days = 180 # dev: 180日で自動削除
 
   # IAM ポリシーは IAM モジュールから注入（循環参照を避けるため後続で更新）
   cloudfront_oac_policy_json = module.iam.s3_cloudfront_oac_policy_json
@@ -132,17 +132,17 @@ module "iam" {
 module "api_gateway" {
   source = "../../modules/api_gateway"
 
-  prefix             = local.prefix
-  lambda_invoke_arn  = module.lambda.invoke_arn
-  allowed_origins    = local.allowed_origins
-  oidc_audience      = var.oidc_audience
-  oidc_issuer        = var.oidc_issuer
+  prefix            = local.prefix
+  lambda_invoke_arn = module.lambda.invoke_arn
+  allowed_origins   = local.allowed_origins
+  oidc_audience     = var.oidc_audience
+  oidc_issuer       = var.oidc_issuer
 
-  throttle_burst_limit    = 200   # dev: 低めに設定
-  throttle_rate_limit     = 50
-  log_retention_days      = 14
-  alarm_sns_arn           = var.alarm_sns_arn
-  tags                    = local.tags
+  throttle_burst_limit = 200 # dev: 低めに設定
+  throttle_rate_limit  = 50
+  log_retention_days   = 14
+  alarm_sns_arn        = var.alarm_sns_arn
+  tags                 = local.tags
 }
 
 # ------------------------------------------------------------------------------
@@ -163,19 +163,19 @@ module "lambda" {
   video_bucket_name      = module.s3_cloudfront.video_bucket_id
   databricks_secret_name = module.secrets.databricks_secret_name
 
-  dev_mode        = true   # dev 環境は常に dev モード
+  dev_mode        = true # dev 環境は常に dev モード
   allowed_origins = local.allowed_origins
 
   timeout     = 30
   memory_size = 512
   log_level   = "DEBUG"
-  enable_xray = false  # dev: コスト削減のため無効
+  enable_xray = false # dev: コスト削減のため無効
 
-  log_retention_days      = 14
-  error_rate_threshold    = 10   # dev: 緩め
-  p99_duration_threshold  = 8000
-  alarm_sns_arn           = var.alarm_sns_arn
-  tags                    = local.tags
+  log_retention_days     = 14
+  error_rate_threshold   = 10 # dev: 緩め
+  p99_duration_threshold = 8000
+  alarm_sns_arn          = var.alarm_sns_arn
+  tags                   = local.tags
 }
 
 # ------------------------------------------------------------------------------
@@ -207,7 +207,7 @@ module "cognito" {
   callback_urls         = ["https://${module.s3_cloudfront.cloudfront_domain_name}/callback", "http://localhost:5173/callback"]
   logout_urls           = ["https://${module.s3_cloudfront.cloudfront_domain_name}", "http://localhost:5173"]
   enable_mfa            = false
-  deletion_protection   = false  # dev: 削除可能
+  deletion_protection   = false # dev: 削除可能
   tags                  = local.tags
 }
 
@@ -294,18 +294,18 @@ resource "aws_iam_role_policy" "github_actions_dev" {
           "lambda:GetFunction", "lambda:PublishLayerVersion",
         ]
         Resource = [module.lambda.function_arn,
-          "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:layer:${local.prefix}-deps:*"]
+        "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:layer:${local.prefix}-deps:*"]
       },
       {
-        Sid    = "S3Deploy"
-        Effect = "Allow"
-        Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
+        Sid      = "S3Deploy"
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
         Resource = [module.s3_cloudfront.frontend_bucket_arn, "${module.s3_cloudfront.frontend_bucket_arn}/*"]
       },
       {
-        Sid    = "CloudFrontInvalidate"
-        Effect = "Allow"
-        Action = ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"]
+        Sid      = "CloudFrontInvalidate"
+        Effect   = "Allow"
+        Action   = ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"]
         Resource = ["arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${module.s3_cloudfront.cloudfront_distribution_id}"]
       },
       {

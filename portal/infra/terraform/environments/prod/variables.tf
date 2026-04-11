@@ -54,16 +54,6 @@ variable "oidc_audience" {
   type = string
 }
 
-variable "idc_client_id" {
-  type      = string
-  sensitive = true
-}
-
-variable "idc_client_secret" {
-  type      = string
-  sensitive = true
-}
-
 variable "ses_sender_email" {
   type = string
 }
@@ -78,12 +68,6 @@ variable "custom_domain" {
   type        = string
 }
 
-variable "api_custom_domain" {
-  description = "API Gateway カスタムドメイン。空の場合は設定しない"
-  type        = string
-  default     = ""
-}
-
 variable "acm_certificate_arn" {
   description = "CloudFront 用 ACM 証明書 ARN（us-east-1 リージョン）"
   type        = string
@@ -91,12 +75,6 @@ variable "acm_certificate_arn" {
 
 variable "route53_zone_id" {
   type = string
-}
-
-variable "provisioned_concurrency" {
-  description = "Lambda プロビジョニング済み同時実行数（0 で無効）"
-  type        = number
-  default     = 2
 }
 
 variable "enable_vpc" {

@@ -65,7 +65,7 @@ module "secrets" {
   source = "../../modules/secrets"
 
   prefix                      = local.prefix
-  recovery_window_days        = 30  # prod: 30日間の削除保護
+  recovery_window_days        = 30 # prod: 30日間の削除保護
   databricks_host             = var.databricks_host
   databricks_sp_client_id     = var.databricks_sp_client_id
   databricks_sp_client_secret = var.databricks_sp_client_secret
@@ -90,8 +90,8 @@ module "s3_cloudfront" {
   route53_zone_id      = var.route53_zone_id
 
   cloudfront_oac_policy_json = module.iam.s3_cloudfront_oac_policy_json
-  cloudfront_price_class     = "PriceClass_All"   # prod: 全リージョン
-  video_retention_days       = 730                # prod: 2年保持
+  cloudfront_price_class     = "PriceClass_All" # prod: 全リージョン
+  video_retention_days       = 730              # prod: 2年保持
 
   tags = local.tags
 }
@@ -127,7 +127,7 @@ module "api_gateway" {
   oidc_audience     = var.oidc_audience
   oidc_issuer       = var.oidc_issuer
 
-  throttle_burst_limit    = 1000  # prod: 本番スループット
+  throttle_burst_limit    = 1000 # prod: 本番スループット
   throttle_rate_limit     = 500
   enable_detailed_metrics = true
   log_retention_days      = 90
@@ -158,13 +158,13 @@ module "lambda" {
   video_bucket_name      = module.s3_cloudfront.video_bucket_id
   databricks_secret_name = module.secrets.databricks_secret_name
 
-  dev_mode        = false  # prod: 本番モード
+  dev_mode        = false # prod: 本番モード
   allowed_origins = local.allowed_origins
 
   timeout                 = 30
-  memory_size             = 1024  # prod: メモリ増量
+  memory_size             = 1024 # prod: メモリ増量
   log_level               = "WARNING"
-  enable_xray             = true  # prod: トレーシング有効
+  enable_xray             = true # prod: トレーシング有効
   provisioned_concurrency = var.provisioned_concurrency
   log_retention_days      = 90
   error_rate_threshold    = 5
@@ -206,7 +206,7 @@ module "cognito" {
   oidc_issuer           = var.oidc_issuer
   callback_urls         = ["https://${var.custom_domain}/callback"]
   logout_urls           = ["https://${var.custom_domain}"]
-  enable_mfa            = true   # prod: MFA 有効
+  enable_mfa            = true # prod: MFA 有効
   deletion_protection   = true
   tags                  = local.tags
 }
@@ -223,21 +223,27 @@ resource "aws_wafv2_web_acl" "cloudfront" {
   description = "Portal CloudFront WAF"
   scope       = "CLOUDFRONT"
 
-  default_action { allow {} }
+  default_action {
+    allow {}
+  }
 
   # AWS マネージドルール: 一般的な脅威対策
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
     priority = 10
-    override_action { none {} }
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"
         vendor_name = "AWS"
         # 大きなリクエストボディは API で必要なためカウントのみ
         rule_action_override {
-          name          = "SizeRestrictions_BODY"
-          action_to_use { count {} }
+          name = "SizeRestrictions_BODY"
+          action_to_use {
+            count {}
+          }
         }
       }
     }
@@ -252,7 +258,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
   rule {
     name     = "AWSManagedRulesSQLiRuleSet"
     priority = 20
-    override_action { none {} }
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesSQLiRuleSet"
@@ -300,7 +308,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     content {
       name     = "GeoBlock"
       priority = 40
-      action { block {} }
+      action {
+        block {}
+      }
       statement {
         geo_match_statement {
           country_codes = var.waf_blocked_countries
@@ -353,7 +363,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "cloudfront" {
 # ── Lambda DLQ（処理失敗メッセージ保全）──────────────────────────────────────
 resource "aws_sqs_queue" "lambda_dlq" {
   name                      = "${local.prefix}-lambda-dlq"
-  message_retention_seconds = 1209600  # 14日
+  message_retention_seconds = 1209600 # 14日
   kms_master_key_id         = "alias/aws/sqs"
 
   tags = local.tags
@@ -404,25 +414,25 @@ resource "aws_cloudwatch_dashboard" "portal" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        type = "metric"; x = 0; y = 0; width = 12; height = 6
+        type = "metric", x = 0, y = 0, width = 12, height = 6
         properties = {
-          title   = "Lambda — 呼び出し数 / エラー数"
-          period  = 300
-          stat    = "Sum"
-          view    = "timeSeries"
+          title  = "Lambda — 呼び出し数 / エラー数"
+          period = 300
+          stat   = "Sum"
+          view   = "timeSeries"
           metrics = [
             ["AWS/Lambda", "Invocations", "FunctionName", module.lambda.function_name, { label = "呼び出し" }],
-            ["AWS/Lambda", "Errors",      "FunctionName", module.lambda.function_name, { label = "エラー", color = "#d13212" }],
-            ["AWS/Lambda", "Throttles",   "FunctionName", module.lambda.function_name, { label = "スロットル", color = "#ff9900" }],
+            ["AWS/Lambda", "Errors", "FunctionName", module.lambda.function_name, { label = "エラー", color = "#d13212" }],
+            ["AWS/Lambda", "Throttles", "FunctionName", module.lambda.function_name, { label = "スロットル", color = "#ff9900" }],
           ]
         }
       },
       {
-        type = "metric"; x = 12; y = 0; width = 12; height = 6
+        type = "metric", x = 12, y = 0, width = 12, height = 6
         properties = {
-          title   = "Lambda — レイテンシ（P50 / P99）"
-          period  = 300
-          view    = "timeSeries"
+          title  = "Lambda — レイテンシ（P50 / P99）"
+          period = 300
+          view   = "timeSeries"
           metrics = [
             ["AWS/Lambda", "Duration", "FunctionName", module.lambda.function_name, { stat = "p50", label = "P50" }],
             ["AWS/Lambda", "Duration", "FunctionName", module.lambda.function_name, { stat = "p99", label = "P99", color = "#d13212" }],
@@ -430,82 +440,82 @@ resource "aws_cloudwatch_dashboard" "portal" {
         }
       },
       {
-        type = "metric"; x = 0; y = 6; width = 12; height = 6
+        type = "metric", x = 0, y = 6, width = 12, height = 6
         properties = {
-          title   = "API Gateway — リクエスト数 / エラー率"
-          period  = 300
-          stat    = "Sum"
-          view    = "timeSeries"
+          title  = "API Gateway — リクエスト数 / エラー率"
+          period = 300
+          stat   = "Sum"
+          view   = "timeSeries"
           metrics = [
-            ["AWS/ApiGateway", "Count",    "ApiId", module.api_gateway.api_id, { label = "リクエスト" }],
+            ["AWS/ApiGateway", "Count", "ApiId", module.api_gateway.api_id, { label = "リクエスト" }],
             ["AWS/ApiGateway", "4XXError", "ApiId", module.api_gateway.api_id, { label = "4xx", color = "#ff9900" }],
             ["AWS/ApiGateway", "5XXError", "ApiId", module.api_gateway.api_id, { label = "5xx", color = "#d13212" }],
           ]
         }
       },
       {
-        type = "metric"; x = 12; y = 6; width = 12; height = 6
+        type = "metric", x = 12, y = 6, width = 12, height = 6
         properties = {
-          title   = "API Gateway — P99 統合レイテンシ"
-          period  = 300
-          view    = "timeSeries"
+          title  = "API Gateway — P99 統合レイテンシ"
+          period = 300
+          view   = "timeSeries"
           metrics = [
             ["AWS/ApiGateway", "IntegrationLatency", "ApiId", module.api_gateway.api_id, { stat = "p99", label = "P99" }],
-            ["AWS/ApiGateway", "Latency",            "ApiId", module.api_gateway.api_id, { stat = "p99", label = "P99(全体)", color = "#aab7b8" }],
+            ["AWS/ApiGateway", "Latency", "ApiId", module.api_gateway.api_id, { stat = "p99", label = "P99(全体)", color = "#aab7b8" }],
           ]
         }
       },
       {
-        type = "metric"; x = 0; y = 12; width = 12; height = 6
+        type = "metric", x = 0, y = 12, width = 12, height = 6
         properties = {
-          title   = "CloudFront — リクエスト数 / エラー率"
-          period  = 300
-          view    = "timeSeries"
+          title  = "CloudFront — リクエスト数 / エラー率"
+          period = 300
+          view   = "timeSeries"
           metrics = [
-            ["AWS/CloudFront", "Requests",     "DistributionId", module.s3_cloudfront.cloudfront_distribution_id, { stat = "Sum", label = "リクエスト" }],
+            ["AWS/CloudFront", "Requests", "DistributionId", module.s3_cloudfront.cloudfront_distribution_id, { stat = "Sum", label = "リクエスト" }],
             ["AWS/CloudFront", "5xxErrorRate", "DistributionId", module.s3_cloudfront.cloudfront_distribution_id, { stat = "Average", label = "5xxエラー率(%)", color = "#d13212" }],
           ]
         }
       },
       {
-        type = "metric"; x = 12; y = 12; width = 12; height = 6
+        type = "metric", x = 12, y = 12, width = 12, height = 6
         properties = {
-          title   = "CloudFront — キャッシュヒット率"
-          period  = 300
-          view    = "timeSeries"
+          title  = "CloudFront — キャッシュヒット率"
+          period = 300
+          view   = "timeSeries"
           metrics = [
             ["AWS/CloudFront", "CacheHitRate", "DistributionId", module.s3_cloudfront.cloudfront_distribution_id, { stat = "Average", label = "キャッシュヒット率(%)" }],
           ]
         }
       },
       {
-        type = "metric"; x = 0; y = 18; width = 8; height = 6
+        type = "metric", x = 0, y = 18, width = 8, height = 6
         properties = {
-          title   = "WAF — ブロック数"
-          period  = 300
-          stat    = "Sum"
-          view    = "timeSeries"
+          title  = "WAF — ブロック数"
+          period = 300
+          stat   = "Sum"
+          view   = "timeSeries"
           metrics = [
             ["AWS/WAFV2", "BlockedRequests", "WebACL", "${local.prefix}-waf", "Region", "us-east-1", "Rule", "ALL", { label = "ブロック合計", color = "#d13212" }],
           ]
         }
       },
       {
-        type = "metric"; x = 8; y = 18; width = 8; height = 6
+        type = "metric", x = 8, y = 18, width = 8, height = 6
         properties = {
-          title   = "SQS DLQ — 未処理メッセージ数"
-          period  = 60
-          stat    = "Maximum"
-          view    = "timeSeries"
+          title  = "SQS DLQ — 未処理メッセージ数"
+          period = 60
+          stat   = "Maximum"
+          view   = "timeSeries"
           metrics = [
             ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.lambda_dlq.name, { label = "DLQ メッセージ数", color = "#d13212" }],
           ]
         }
       },
       {
-        type = "alarm"; x = 16; y = 18; width = 8; height = 6
+        type = "alarm", x = 16, y = 18, width = 8, height = 6
         properties = {
-          title  = "アラーム状態"
+          title = "アラーム状態"
           alarms = [
             "arn:aws:cloudwatch:${var.aws_region}:${data.aws_caller_identity.current.account_id}:alarm:${local.prefix}-lambda-error-rate",
             "arn:aws:cloudwatch:${var.aws_region}:${data.aws_caller_identity.current.account_id}:alarm:${local.prefix}-lambda-p99-duration",
@@ -572,8 +582,8 @@ resource "aws_iam_policy" "github_actions" {
 data "aws_iam_policy_document" "github_actions_perms" {
   # Lambda コード更新
   statement {
-    sid     = "LambdaDeploy"
-    effect  = "Allow"
+    sid    = "LambdaDeploy"
+    effect = "Allow"
     actions = [
       "lambda:UpdateFunctionCode",
       "lambda:UpdateFunctionConfiguration",
@@ -587,8 +597,8 @@ data "aws_iam_policy_document" "github_actions_perms" {
 
   # Lambda レイヤー更新
   statement {
-    sid     = "LambdaLayer"
-    effect  = "Allow"
+    sid    = "LambdaLayer"
+    effect = "Allow"
     actions = [
       "lambda:PublishLayerVersion",
       "lambda:GetLayerVersion",
@@ -609,8 +619,8 @@ data "aws_iam_policy_document" "github_actions_perms" {
 
   # CloudFront キャッシュ無効化
   statement {
-    sid     = "CloudFrontInvalidate"
-    effect  = "Allow"
+    sid    = "CloudFrontInvalidate"
+    effect = "Allow"
     actions = [
       "cloudfront:CreateInvalidation",
       "cloudfront:GetInvalidation",
@@ -631,9 +641,9 @@ data "aws_iam_policy_document" "github_actions_perms" {
 
   # Terraform DynamoDB ロック
   statement {
-    sid     = "TerraformLock"
-    effect  = "Allow"
-    actions = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"]
+    sid       = "TerraformLock"
+    effect    = "Allow"
+    actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"]
     resources = ["arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/portal-terraform-lock"]
   }
 
@@ -675,16 +685,16 @@ resource "aws_iam_role_policy_attachment" "github_actions" {
 # ------------------------------------------------------------------------------
 # Outputs
 # ------------------------------------------------------------------------------
-output "cloudfront_url"              { value = "https://${var.custom_domain}" }
-output "api_endpoint"                { value = module.api_gateway.api_endpoint }
-output "frontend_bucket"             { value = module.s3_cloudfront.frontend_bucket_id }
-output "video_bucket"                { value = module.s3_cloudfront.video_bucket_id }
-output "lambda_function_name"        { value = module.lambda.function_name }
-output "cloudfront_distribution_id"  { value = module.s3_cloudfront.cloudfront_distribution_id }
-output "cognito_user_pool_id"        { value = module.cognito.user_pool_id }
-output "cognito_web_client_id"       { value = module.cognito.web_client_id }
-output "waf_arn"                     { value = aws_wafv2_web_acl.cloudfront.arn }
-output "lambda_dlq_url"              { value = aws_sqs_queue.lambda_dlq.url }
+output "cloudfront_url" { value = "https://${var.custom_domain}" }
+output "api_endpoint" { value = module.api_gateway.api_endpoint }
+output "frontend_bucket" { value = module.s3_cloudfront.frontend_bucket_id }
+output "video_bucket" { value = module.s3_cloudfront.video_bucket_id }
+output "lambda_function_name" { value = module.lambda.function_name }
+output "cloudfront_distribution_id" { value = module.s3_cloudfront.cloudfront_distribution_id }
+output "cognito_user_pool_id" { value = module.cognito.user_pool_id }
+output "cognito_web_client_id" { value = module.cognito.web_client_id }
+output "waf_arn" { value = aws_wafv2_web_acl.cloudfront.arn }
+output "lambda_dlq_url" { value = aws_sqs_queue.lambda_dlq.url }
 output "dashboard_url" {
   value = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${local.prefix}"
 }

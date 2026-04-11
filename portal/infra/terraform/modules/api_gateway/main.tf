@@ -202,7 +202,7 @@ resource "aws_route53_record" "api" {
 # ------------------------------------------------------------------------------
 # CloudWatch アラーム
 # ------------------------------------------------------------------------------
-resource "aws_cloudwatch_metric_alarm" "5xx_rate" {
+resource "aws_cloudwatch_metric_alarm" "rate_5xx" {
   alarm_name          = "${var.prefix}-apigw-5xx-rate"
   alarm_description   = "API Gateway 5xx エラー率が閾値を超過"
   comparison_operator = "GreaterThanThreshold"

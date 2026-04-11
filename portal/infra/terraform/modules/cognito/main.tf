@@ -92,16 +92,16 @@ resource "aws_cognito_identity_provider" "idc" {
   provider_type = "OIDC"
 
   provider_details = {
-    client_id                = var.idc_client_id
-    client_secret            = var.idc_client_secret
+    client_id                 = var.idc_client_id
+    client_secret             = var.idc_client_secret
     attributes_request_method = "GET"
-    oidc_issuer              = var.oidc_issuer
-    authorize_scopes         = "openid email profile"
+    oidc_issuer               = var.oidc_issuer
+    authorize_scopes          = "openid email profile"
   }
 
   attribute_mapping = {
-    email    = "email"
-    username = "sub"
+    email                = "email"
+    username             = "sub"
     "custom:iam_user_id" = "sub"
   }
 
