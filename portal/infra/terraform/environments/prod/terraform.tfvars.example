@@ -1,0 +1,48 @@
+# prod 環境 terraform.tfvars.example
+# コピーして terraform.tfvars を作成し .gitignore に追加してください
+
+project    = "portal"
+aws_region = "ap-northeast-1"
+owner      = "platform-team"
+
+lambda_zip_path = "../../backend/lambda.zip"
+layer_zip_path  = "../../backend/layer.zip"
+
+# Databricks
+databricks_host             = "https://adb-xxxxxxxxxxxx.azuredatabricks.net"
+databricks_sp_client_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+databricks_sp_client_secret = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+databricks_sql_warehouse_id = "xxxxxxxxxxxxxxxx"
+
+# IAM Identity Center (OIDC)
+oidc_issuer   = "https://identitycenter.amazonaws.com/ssoins-xxxxxxxxxxxxxxxx"
+oidc_jwks_uri = "https://identitycenter.amazonaws.com/ssoins-xxxxxxxxxxxxxxxx/.well-known/jwks.json"
+oidc_audience = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+idc_client_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+idc_client_secret = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# メール
+ses_sender_email  = "noreply@portal.example.com"
+ses_sender_domain = "portal.example.com"
+
+# ドメイン（prod では必須）
+custom_domain       = "portal.example.com"
+api_custom_domain   = ""
+acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+route53_zone_id     = "ZXXXXXXXXXXXXXXXXXX"
+
+# スケーリング
+provisioned_concurrency = 2
+
+# VPC（任意）
+enable_vpc     = false
+vpc_id         = ""
+vpc_subnet_ids = []
+
+# 監視
+alarm_sns_arn = "arn:aws:sns:ap-northeast-1:123456789012:portal-prod-alarms"
+extra_allowed_origins = []
+
+# GitHub Actions OIDC
+github_org  = "your-github-org"
+github_repo = "portal"

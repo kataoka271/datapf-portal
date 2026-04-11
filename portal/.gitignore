@@ -1,0 +1,64 @@
+# ==== Terraform ====
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/terraform.tfstate.d/
+**/tfplan
+**/terraform.tfvars
+# .example は残す
+!**/terraform.tfvars.example
+
+# ==== Lambda build artifacts ====
+backend/lambda.zip
+backend/layer.zip
+backend/layer_build/
+backend/dist/
+
+# ==== Python ====
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+*.egg
+build/
+dist/
+*.so
+.venv/
+venv/
+env/
+.env
+# .env.example は残す
+!backend/.env.example
+
+# ==== Node / Frontend ====
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+!frontend/.env.example
+.npm
+
+# ==== IDE ====
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ==== Secrets ====
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets
+
+# ==== Logs ====
+*.log
+logs/

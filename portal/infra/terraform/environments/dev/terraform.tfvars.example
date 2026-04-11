@@ -1,0 +1,48 @@
+# ==============================================================================
+# dev 環境 tfvars サンプル
+# このファイルをコピーして terraform.tfvars を作成してください
+# terraform.tfvars は .gitignore に追加すること（機密情報を含む）
+# ==============================================================================
+
+project    = "portal"
+aws_region = "ap-northeast-1"
+owner      = "platform-team"
+
+# ── デプロイパッケージ ──────────────────────────────────────────────────────────
+# make build で生成されるパスに合わせること
+lambda_zip_path = "../../backend/lambda.zip"
+layer_zip_path  = "../../backend/layer.zip"
+
+# ── Databricks ─────────────────────────────────────────────────────────────────
+databricks_host             = "https://adb-xxxxxxxxxxxx.azuredatabricks.net"
+databricks_sp_client_id     = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+databricks_sp_client_secret = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+databricks_sql_warehouse_id = "xxxxxxxxxxxxxxxx"
+
+# ── IAM Identity Center ────────────────────────────────────────────────────────
+# AWS コンソール > IAM Identity Center > 設定 から取得
+oidc_issuer   = "https://identitycenter.amazonaws.com/ssoins-xxxxxxxxxxxxxxxx"
+oidc_jwks_uri = "https://identitycenter.amazonaws.com/ssoins-xxxxxxxxxxxxxxxx/.well-known/jwks.json"
+oidc_audience = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # アプリケーション登録時のクライアント ID
+
+# IAM Identity Center > アプリケーション > Cognito フェデレーション用
+idc_client_id     = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+idc_client_secret = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# ── メール ─────────────────────────────────────────────────────────────────────
+ses_sender_email  = "noreply@portal.example.com"
+ses_sender_domain = "portal.example.com"  # ドメイン検証する場合。空文字はメールで検証
+
+# ── ドメイン（任意）────────────────────────────────────────────────────────────
+# 設定しない場合は CloudFront の *.cloudfront.net ドメインを使用
+custom_domain       = ""   # "dev.portal.example.com"
+acm_certificate_arn = ""   # "arn:aws:acm:us-east-1:xxxx:certificate/xxxx"
+route53_zone_id     = ""   # "ZXXXXXXXXXXXXXXXXX"
+
+# ── 監視（任意）────────────────────────────────────────────────────────────────
+# 設定しない場合はアラーム通知なし
+alarm_sns_arn = ""   # "arn:aws:sns:ap-northeast-1:xxxx:portal-alerts"
+
+# GitHub Actions OIDC
+github_org  = "your-github-org"
+github_repo = "portal"

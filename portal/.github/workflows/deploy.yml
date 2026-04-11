@@ -1,0 +1,347 @@
+name: Deploy Portal
+
+on:
+  push:
+    branches:
+      - main        # prod デプロイ
+      - develop     # dev デプロイ
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  AWS_REGION: ap-northeast-1
+  TF_VERSION: "1.8.0"
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+# 同一ブランチへの並列デプロイを防ぐ
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ────────────────────────────────────────────────────────────
+  # 1. バックエンドテスト
+  # ────────────────────────────────────────────────────────────
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest httpx
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+  # ────────────────────────────────────────────────────────────
+  # 2. フロントエンドビルド・型チェック
+  # ────────────────────────────────────────────────────────────
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: /v1
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 1
+
+  # ────────────────────────────────────────────────────────────
+  # 3. Lambda パッケージビルド
+  # ────────────────────────────────────────────────────────────
+  build-lambda:
+    name: Build Lambda Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build Lambda layer (dependencies)
+        run: |
+          mkdir -p backend/layer_build/python
+          pip install \
+            -r backend/requirements.txt \
+            -t backend/layer_build/python \
+            --platform mlinux_2_x86_64 \
+            --implementation cp \
+            --python-version 3.11 \
+            --only-binary=:all: \
+            --upgrade
+          cd backend/layer_build && zip -r ../layer.zip python/
+          echo "Layer size: $(du -sh backend/layer.zip | cut -f1)"
+
+      - name: Build Lambda app code
+        run: |
+          cd backend
+          zip -r lambda.zip app/ \
+            -x "**/__pycache__/*" \
+            -x "**/*.pyc" \
+            -x "**/tests/*"
+          echo "Lambda size: $(du -sh lambda.zip | cut -f1)"
+
+      - name: Upload Lambda artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-packages
+          path: |
+            backend/lambda.zip
+            backend/layer.zip
+          retention-days: 1
+
+  # ────────────────────────────────────────────────────────────
+  # 4. Terraform バリデーション（PR 時）
+  # ────────────────────────────────────────────────────────────
+  tf-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive infra/terraform/
+
+      - name: Terraform Validate (modules)
+        run: |
+          for module in infra/terraform/modules/*/; do
+            echo "Validating: $module"
+            cd "$module"
+            terraform init -backend=false
+            terraform validate
+            cd - > /dev/null
+          done
+
+  # ────────────────────────────────────────────────────────────
+  # 5. dev 環境デプロイ (develop ブランチ push 時)
+  # ────────────────────────────────────────────────────────────
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: [test-backend, build-frontend, build-lambda]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    environment: dev
+
+    permissions:
+      id-token: write   # OIDC for AWS
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Lambda packages
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-packages
+          path: backend/
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Create tfvars from secrets
+        working-directory: infra/terraform/environments/dev
+        run: |
+          cat > terraform.tfvars <<EOF
+          project                     = "portal"
+          aws_region                  = "${{ env.AWS_REGION }}"
+          databricks_host             = "${{ secrets.DATABRICKS_HOST }}"
+          databricks_sp_client_id     = "${{ secrets.DATABRICKS_SP_CLIENT_ID }}"
+          databricks_sp_client_secret = "${{ secrets.DATABRICKS_SP_CLIENT_SECRET }}"
+          databricks_sql_warehouse_id = "${{ secrets.DATABRICKS_SQL_WAREHOUSE_ID }}"
+          oidc_issuer                 = "${{ secrets.OIDC_ISSUER }}"
+          oidc_jwks_uri               = "${{ secrets.OIDC_JWKS_URI }}"
+          oidc_audience               = "${{ secrets.OIDC_AUDIENCE }}"
+          idc_client_id               = "${{ secrets.IDC_CLIENT_ID }}"
+          idc_client_secret           = "${{ secrets.IDC_CLIENT_SECRET }}"
+          ses_sender_email            = "${{ secrets.SES_SENDER_EMAIL }}"
+          alarm_sns_arn               = "${{ secrets.ALARM_SNS_ARN }}"
+          EOF
+
+      - name: Terraform Init & Apply
+        working-directory: infra/terraform/environments/dev
+        run: |
+          terraform init
+          terraform apply -var-file="terraform.tfvars" -auto-approve
+
+      - name: Upload frontend to S3
+        working-directory: infra/terraform/environments/dev
+        run: |
+          BUCKET=$(terraform output -raw frontend_bucket)
+          aws s3 sync ../../../frontend/dist/ s3://${BUCKET}/ \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html"
+          aws s3 cp ../../../frontend/dist/index.html s3://${BUCKET}/index.html \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: CloudFront invalidation
+        working-directory: infra/terraform/environments/dev
+        run: |
+          DIST_ID=$(terraform output -raw cloudfront_distribution_id)
+          aws cloudfront create-invalidation \
+            --distribution-id ${DIST_ID} \
+            --paths "/*"
+
+      - name: Output deployment URL
+        working-directory: infra/terraform/environments/dev
+        run: |
+          echo "## Dev Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "URL: $(terraform output -raw cloudfront_url)" >> $GITHUB_STEP_SUMMARY
+          echo "API: $(terraform output -raw api_endpoint)" >> $GITHUB_STEP_SUMMARY
+
+  # ────────────────────────────────────────────────────────────
+  # 6. prod 環境デプロイ (main ブランチ push 時 + 承認必須)
+  # ────────────────────────────────────────────────────────────
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [test-backend, build-frontend, build-lambda]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: prod   # GitHub Environment protection rules で承認設定
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Lambda packages
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-packages
+          path: backend/
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Create tfvars from secrets
+        working-directory: infra/terraform/environments/prod
+        run: |
+          cat > terraform.tfvars <<EOF
+          project                     = "portal"
+          aws_region                  = "${{ env.AWS_REGION }}"
+          databricks_host             = "${{ secrets.DATABRICKS_HOST }}"
+          databricks_sp_client_id     = "${{ secrets.DATABRICKS_SP_CLIENT_ID }}"
+          databricks_sp_client_secret = "${{ secrets.DATABRICKS_SP_CLIENT_SECRET }}"
+          databricks_sql_warehouse_id = "${{ secrets.DATABRICKS_SQL_WAREHOUSE_ID }}"
+          oidc_issuer                 = "${{ secrets.OIDC_ISSUER }}"
+          oidc_jwks_uri               = "${{ secrets.OIDC_JWKS_URI }}"
+          oidc_audience               = "${{ secrets.OIDC_AUDIENCE }}"
+          idc_client_id               = "${{ secrets.IDC_CLIENT_ID }}"
+          idc_client_secret           = "${{ secrets.IDC_CLIENT_SECRET }}"
+          ses_sender_email            = "${{ secrets.SES_SENDER_EMAIL }}"
+          ses_sender_domain           = "${{ secrets.SES_SENDER_DOMAIN }}"
+          custom_domain               = "${{ secrets.CUSTOM_DOMAIN }}"
+          api_custom_domain           = "${{ secrets.API_CUSTOM_DOMAIN }}"
+          acm_certificate_arn         = "${{ secrets.ACM_CERTIFICATE_ARN }}"
+          route53_zone_id             = "${{ secrets.ROUTE53_ZONE_ID }}"
+          alarm_sns_arn               = "${{ secrets.ALARM_SNS_ARN }}"
+          provisioned_concurrency     = 2
+          EOF
+
+      - name: Terraform Init & Plan
+        working-directory: infra/terraform/environments/prod
+        run: |
+          terraform init
+          terraform plan -var-file="terraform.tfvars" -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: infra/terraform/environments/prod
+        run: terraform apply tfplan
+
+      - name: Upload frontend to S3
+        working-directory: infra/terraform/environments/prod
+        run: |
+          BUCKET=$(terraform output -raw frontend_bucket)
+          aws s3 sync ../../../frontend/dist/ s3://${BUCKET}/ \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html"
+          aws s3 cp ../../../frontend/dist/index.html s3://${BUCKET}/index.html \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: CloudFront invalidation
+        working-directory: infra/terraform/environments/prod
+        run: |
+          DIST_ID=$(terraform output -raw cloudfront_distribution_id)
+          aws cloudfront create-invalidation \
+            --distribution-id ${DIST_ID} \
+            --paths "/*"
+
+      - name: Output deployment URL
+        working-directory: infra/terraform/environments/prod
+        run: |
+          echo "## Production Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "URL: $(terraform output -raw cloudfront_url)" >> $GITHUB_STEP_SUMMARY
