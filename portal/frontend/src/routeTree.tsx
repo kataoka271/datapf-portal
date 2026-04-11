@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   createRootRoute,
   createRoute,
@@ -21,16 +22,28 @@ import {
   AlertList,
 } from "./components/notifications/NotificationList";
 import { useAuthStore } from "./stores";
+import { useCurrentUser } from "./hooks";
 
 // ── Root ──────────────────────────────────────────────────────────────────────
-function RootComponent() {
-  const token = useAuthStore((s) => s.token);
-  if (!token) return <LoginPage />;
+function AuthenticatedRoot() {
+  const setUser = useAuthStore((s) => s.setUser);
+  const { data: user } = useCurrentUser();
+
+  useEffect(() => {
+    if (user) setUser(user);
+  }, [user, setUser]);
+
   return (
     <AppShell>
       <Outlet />
     </AppShell>
   );
+}
+
+function RootComponent() {
+  const token = useAuthStore((s) => s.token);
+  if (!token) return <LoginPage />;
+  return <AuthenticatedRoot />;
 }
 
 const rootRoute = createRootRoute({ component: RootComponent });
