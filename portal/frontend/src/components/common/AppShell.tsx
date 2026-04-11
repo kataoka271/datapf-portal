@@ -21,11 +21,6 @@ const NAV = [
         to: "/catalogs/search",
         icon: "M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z",
       },
-      {
-        label: "申請管理",
-        to: "/catalogs/requests",
-        icon: "M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
-      },
     ],
   },
   {

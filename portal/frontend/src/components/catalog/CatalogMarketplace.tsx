@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCatalogs, useRevokeAccess } from "@/hooks";
 import { useUIStore } from "@/stores";
@@ -76,6 +77,11 @@ function CatalogCard({
           {catalog.owner_user_id}
         </span>
         <div className="flex gap-1.5 flex-shrink-0">
+          <Link to={`/catalogs/${catalog.catalog_name}`}>
+            <Button size="sm" variant="ghost">
+              詳細
+            </Button>
+          </Link>
           {!isOwner && !isApproved && !isPending && (
             <Button
               size="sm"

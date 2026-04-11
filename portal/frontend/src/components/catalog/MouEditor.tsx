@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useMou, useUpdateMou } from "@/hooks";
@@ -67,6 +68,26 @@ export function MouEditor({ catalogName }: { catalogName: string }) {
 
   return (
     <div className="p-6 space-y-5">
+      <Link
+        to={`/catalogs/${catalogName}`}
+        className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+      >
+        <svg
+          className="w-3.5 h-3.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        カタログ詳細へ戻る
+      </Link>
+
       <PageHeader
         title="MOU・チェックリスト編集"
         description={`${catalogName} — 現在のバージョン: ${mou?.version ?? "-"}`}

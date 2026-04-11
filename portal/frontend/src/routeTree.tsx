@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { AppShell } from "./components/common/AppShell";
 import { CatalogMarketplace } from "./components/catalog/CatalogMarketplace";
+import { CatalogDetailPage } from "./components/catalog/CatalogDetailPage";
 import { CrossSearch } from "./components/catalog/CrossSearch";
 import { AccessRequestManagement } from "./components/catalog/AccessRequestManagement";
 import { MouEditor } from "./components/catalog/MouEditor";
@@ -98,10 +99,22 @@ const crossSearchRoute = createRoute({
   component: CrossSearch,
 });
 
+const catalogDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/catalogs/$catalogName",
+  component: () => {
+    const { catalogName } = catalogDetailRoute.useParams();
+    return <CatalogDetailPage catalogName={catalogName} />;
+  },
+});
+
 const catalogRequestsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/catalogs/requests",
-  component: () => <AccessRequestManagement catalogName="vehicle_timeseries" />,
+  path: "/catalogs/$catalogName/requests",
+  component: () => {
+    const { catalogName } = catalogRequestsRoute.useParams();
+    return <AccessRequestManagement catalogName={catalogName} />;
+  },
 });
 
 const mouEditorRoute = createRoute({
@@ -159,6 +172,7 @@ export const routeTree = rootRoute.addChildren([
   indexRoute,
   catalogMarketplaceRoute,
   crossSearchRoute,
+  catalogDetailRoute,
   catalogRequestsRoute,
   mouEditorRoute,
   appsRoute,
