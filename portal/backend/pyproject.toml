@@ -23,3 +23,6 @@ dev = [
     "mypy>=1.20.0",
     "ruff>=0.15.10",
 ]
+
+[tool.ruff]
+line-length = 120

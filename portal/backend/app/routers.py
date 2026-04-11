@@ -2,29 +2,39 @@
 All Lambda API routers.
 Each router corresponds to one section in the API endpoint design document.
 """
+
 from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.auth import get_current_user, require_admin
-from app.models import (
-    CurrentUser, CreateCatalogRequest, UpdateMouRequest,
-    UpdateMemberRequest, CreateAccessRequestBody, DecideAccessRequest,
-    SearchRequest, SaveViewRequest,
-    CreateAppRequest,
-    VehiclesRequest, TimeseriesRequest, StatisticsRequest,
-)
 from app.config import get_settings
+from app.models import (
+    CreateAccessRequestBody,
+    CreateAppRequest,
+    CreateCatalogRequest,
+    CurrentUser,
+    DecideAccessRequest,
+    SaveViewRequest,
+    SearchRequest,
+    StatisticsRequest,
+    TimeseriesRequest,
+    UpdateMemberRequest,
+    UpdateMouRequest,
+    VehiclesRequest,
+)
 from app.services import databricks as db_svc
 from app.services import mock_data as mock
 
-_NOW = lambda: datetime.now(timezone.utc)   # noqa: E731
+_NOW = lambda: datetime.now(timezone.utc)  # noqa: E731
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 router_auth = APIRouter(prefix="/auth", tags=["auth"])
+
 
 @router_auth.get("/me")
 def get_me(user: CurrentUser = Depends(get_current_user)):
@@ -34,6 +44,7 @@ def get_me(user: CurrentUser = Depends(get_current_user)):
 # ── Notifications ─────────────────────────────────────────────────────────────
 router_notifications = APIRouter(prefix="/notifications", tags=["notifications"])
 
+
 @router_notifications.get("")
 def list_notifications(
     is_read: Optional[bool] = Query(None),
@@ -42,7 +53,7 @@ def list_notifications(
     user: CurrentUser = Depends(get_current_user),
 ):
     settings = get_settings()
-    all_notifs = mock.mock_notifications()   # dev mode
+    all_notifs = mock.mock_notifications()  # dev mode
     if not settings.dev_mode:
         rows = db_svc.execute_sql(
             f"""SELECT * FROM {settings.portal_catalog}.notifications.inbox
@@ -56,7 +67,7 @@ def list_notifications(
         all_notifs = [n for n in all_notifs if n["is_read"] == is_read]
 
     unread_count = sum(1 for n in all_notifs if not n["is_read"])
-    page = all_notifs[offset: offset + limit]
+    page = all_notifs[offset : offset + limit]
     return {"total": len(all_notifs), "unread_count": unread_count, "items": page}
 
 
@@ -89,6 +100,7 @@ def mark_all_read(user: CurrentUser = Depends(get_current_user)):
 # ── Catalogs ──────────────────────────────────────────────────────────────────
 router_catalogs = APIRouter(prefix="/catalogs", tags=["catalogs"])
 
+
 @router_catalogs.get("")
 def list_catalogs(
     q: Optional[str] = Query(None),
@@ -98,18 +110,20 @@ def list_catalogs(
     user: CurrentUser = Depends(get_current_user),
 ):
     settings = get_settings()
-    items = mock.mock_catalogs(user.user_id)   # dev mode
+    items = mock.mock_catalogs(user.user_id)  # dev mode
     if not settings.dev_mode:
         items = db_svc.execute_sql(
             f"SELECT * FROM {settings.portal_catalog}.governance.catalog_definitions WHERE status = 'ACTIVE'",
         )
     if q:
         q_lower = q.lower()
-        items = [i for i in items if q_lower in i["catalog_name"].lower() or q_lower in i.get("description","").lower()]
+        items = [
+            i for i in items if q_lower in i["catalog_name"].lower() or q_lower in i.get("description", "").lower()
+        ]
     if subscribed is True:
         items = [i for i in items if i.get("my_role") not in ("none", None)]
     total = len(items)
-    return {"total": total, "items": items[offset: offset + limit]}
+    return {"total": total, "items": items[offset : offset + limit]}
 
 
 @router_catalogs.post("")
@@ -120,8 +134,14 @@ def create_catalog(body: CreateCatalogRequest, user: CurrentUser = Depends(get_c
         db_svc.execute_sql(
             f"""INSERT INTO {settings.portal_catalog}.governance.catalog_definitions
                 VALUES (?,?,?,?,?,?,current_timestamp(),current_timestamp())""",
-            (body.catalog_name, body.display_name, body.description, user.user_id,
-             body.requires_approval, "ACTIVE"),
+            (
+                body.catalog_name,
+                body.display_name,
+                body.description,
+                user.user_id,
+                body.requires_approval,
+                "ACTIVE",
+            ),
         )
     return {"catalog_name": body.catalog_name, "status": "CREATED"}
 
@@ -133,10 +153,13 @@ def get_catalog(catalog_name: str, user: CurrentUser = Depends(get_current_user)
     cat = next((c for c in items if c["catalog_name"] == catalog_name), None)
     if not cat:
         raise HTTPException(status_code=404, detail="カタログが見つかりません")
-    return {**cat, "schemas": [
-        {"schema_name": "drive", "table_count": 3},
-        {"schema_name": "sensors", "table_count": 5},
-    ]}
+    return {
+        **cat,
+        "schemas": [
+            {"schema_name": "drive", "table_count": 3},
+            {"schema_name": "sensors", "table_count": 5},
+        ],
+    }
 
 
 @router_catalogs.get("/{catalog_name}/mou")
@@ -150,6 +173,7 @@ def get_mou(catalog_name: str, user: CurrentUser = Depends(get_current_user)):
         )
         if rows:
             import json as _json
+
             r = rows[0]
             r["checklist"] = _json.loads(r.get("checklist_json", "[]"))
             return r
@@ -157,31 +181,57 @@ def get_mou(catalog_name: str, user: CurrentUser = Depends(get_current_user)):
 
 
 @router_catalogs.put("/{catalog_name}/mou")
-def update_mou(catalog_name: str, body: UpdateMouRequest, user: CurrentUser = Depends(get_current_user)):
+def update_mou(
+    catalog_name: str,
+    body: UpdateMouRequest,
+    user: CurrentUser = Depends(get_current_user),
+):
     settings = get_settings()
     import json as _json
+
     if not settings.dev_mode:
         db_svc.execute_sql(
             f"""UPDATE {settings.portal_catalog}.governance.mou_definitions
-                SET is_current = false WHERE catalog_name = ?""", (catalog_name,))
+                SET is_current = false WHERE catalog_name = ?""",
+            (catalog_name,),
+        )
         new_ver = "v1"
         rows = db_svc.execute_sql(
             f"SELECT MAX(version) as v FROM {settings.portal_catalog}.governance.mou_definitions WHERE catalog_name = ?",
-            (catalog_name,))
+            (catalog_name,),
+        )
         if rows and rows[0].get("v"):
-            n = int(rows[0]["v"].replace("v","")) + 1
+            n = int(rows[0]["v"].replace("v", "")) + 1
             new_ver = f"v{n}"
         db_svc.execute_sql(
             f"""INSERT INTO {settings.portal_catalog}.governance.mou_definitions
                 VALUES (uuid(),?,?,?,?,true,?,current_timestamp())""",
-            (catalog_name, new_ver, body.mou_text, _json.dumps(body.checklist), user.user_id),
+            (
+                catalog_name,
+                new_ver,
+                body.mou_text,
+                _json.dumps(body.checklist),
+                user.user_id,
+            ),
         )
-        return {"catalog_name": catalog_name, "version": new_ver, "updated_at": _NOW().isoformat()}
-    return {"catalog_name": catalog_name, "version": "v4", "updated_at": _NOW().isoformat()}
+        return {
+            "catalog_name": catalog_name,
+            "version": new_ver,
+            "updated_at": _NOW().isoformat(),
+        }
+    return {
+        "catalog_name": catalog_name,
+        "version": "v4",
+        "updated_at": _NOW().isoformat(),
+    }
 
 
 @router_catalogs.get("/{catalog_name}/members")
-def get_members(catalog_name: str, role: Optional[str] = Query(None), user: CurrentUser = Depends(get_current_user)):
+def get_members(
+    catalog_name: str,
+    role: Optional[str] = Query(None),
+    user: CurrentUser = Depends(get_current_user),
+):
     members = mock.mock_members(catalog_name)
     if role:
         members = [m for m in members if m["role"] == role]
@@ -189,7 +239,12 @@ def get_members(catalog_name: str, role: Optional[str] = Query(None), user: Curr
 
 
 @router_catalogs.patch("/{catalog_name}/members/{user_id}")
-def update_member(catalog_name: str, user_id: str, body: UpdateMemberRequest, user: CurrentUser = Depends(get_current_user)):
+def update_member(
+    catalog_name: str,
+    user_id: str,
+    body: UpdateMemberRequest,
+    user: CurrentUser = Depends(get_current_user),
+):
     settings = get_settings()
     if not settings.dev_mode:
         db_svc.revoke_catalog_viewer(catalog_name, user_id)
@@ -225,6 +280,7 @@ def create_access_request(
 ):
     settings = get_settings()
     import uuid as _uuid
+
     agreement_id = str(_uuid.uuid4())
     result_status = "APPROVED"
 
@@ -236,19 +292,29 @@ def create_access_request(
 
     if not settings.dev_mode:
         import json as _json
+
         db_svc.execute_sql(
             f"""INSERT INTO {settings.portal_catalog}.governance.mou_agreements VALUES
                 (?,?,?,?,?,?,?,current_timestamp(),NULL,NULL,NULL,NULL)""",
-            (agreement_id, catalog_name, user.user_id,
-             body.mou_version, body.mou_version,
-             _json.dumps([r.model_dump() for r in body.checklist_responses]),
-             result_status),
+            (
+                agreement_id,
+                catalog_name,
+                user.user_id,
+                body.mou_version,
+                body.mou_version,
+                _json.dumps([r.model_dump() for r in body.checklist_responses]),
+                result_status,
+            ),
         )
         if result_status == "APPROVED":
             db_svc.grant_catalog_viewer(catalog_name, user.user_id)
 
     role_granted = "viewer" if result_status == "APPROVED" else None
-    return {"agreement_id": agreement_id, "status": result_status, "role_granted": role_granted}
+    return {
+        "agreement_id": agreement_id,
+        "status": result_status,
+        "role_granted": role_granted,
+    }
 
 
 @router_catalogs.patch("/{catalog_name}/access-requests/{agreement_id}")
@@ -274,7 +340,11 @@ def decide_access_request(
             )
             if rows:
                 db_svc.grant_catalog_viewer(catalog_name, rows[0]["user_id"])
-    return {"agreement_id": agreement_id, "status": new_status, "decided_at": _NOW().isoformat()}
+    return {
+        "agreement_id": agreement_id,
+        "status": new_status,
+        "decided_at": _NOW().isoformat(),
+    }
 
 
 @router_catalogs.delete("/{catalog_name}/access-requests/{agreement_id}")
@@ -298,6 +368,7 @@ def revoke_access_request(
 # ── Cross search ───────────────────────────────────────────────────────────────
 router_search = APIRouter(prefix="/catalogs", tags=["search"])
 
+
 @router_search.post("/search")
 def cross_search(body: SearchRequest, user: CurrentUser = Depends(get_current_user)):
     settings = get_settings()
@@ -310,11 +381,9 @@ def cross_search(body: SearchRequest, user: CurrentUser = Depends(get_current_us
 @router_search.post("/search/views")
 def save_view(body: SaveViewRequest, user: CurrentUser = Depends(get_current_user)):
     import uuid as _uuid
+
     settings = get_settings()
-    cols = ", ".join(
-        f"{c.catalog_name}.{c.schema_name}.{c.table_name}.{c.column_name}"
-        for c in body.matched_columns
-    )
+    cols = ", ".join(f"{c.catalog_name}.{c.schema_name}.{c.table_name}.{c.column_name}" for c in body.matched_columns)
     ddl = f"CREATE OR REPLACE VIEW {body.target_schema}.{body.view_name} AS\nSELECT {cols}\nFROM ...;"
     view_id = str(_uuid.uuid4())
     view_full_name = f"{body.target_schema}.{body.view_name}"
@@ -337,6 +406,7 @@ def save_view(body: SaveViewRequest, user: CurrentUser = Depends(get_current_use
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 router_apps = APIRouter(prefix="/apps", tags=["apps"])
+
 
 @router_apps.get("")
 def list_apps(
@@ -364,15 +434,24 @@ def get_app(app_id: str, user: CurrentUser = Depends(get_current_user)):
 @router_apps.post("")
 def create_app(body: CreateAppRequest, user: CurrentUser = Depends(get_current_user)):
     import uuid as _uuid
+
     settings = get_settings()
     app_id = str(_uuid.uuid4())
     if not settings.dev_mode:
         import json as _json
+
         db_svc.execute_sql(
             f"""INSERT INTO {settings.portal_catalog}.apps.app_registry VALUES
                 (?,?,?,?,?,?,?,NULL,NULL,'ACTIVE',current_timestamp(),current_timestamp())""",
-            (app_id, body.name, body.description, user.user_id, body.redirect_url,
-             _json.dumps(body.used_catalog_names), _json.dumps(body.published_catalog_names or [])),
+            (
+                app_id,
+                body.name,
+                body.description,
+                user.user_id,
+                body.redirect_url,
+                _json.dumps(body.used_catalog_names),
+                _json.dumps(body.published_catalog_names or []),
+            ),
         )
     return {"app_id": app_id, "status": "ACTIVE"}
 
@@ -380,6 +459,7 @@ def create_app(body: CreateAppRequest, user: CurrentUser = Depends(get_current_u
 @router_apps.post("/{app_id}/subscriptions")
 def subscribe_app(app_id: str, user: CurrentUser = Depends(get_current_user)):
     import uuid as _uuid
+
     settings = get_settings()
     sub_id = str(_uuid.uuid4())
     if not settings.dev_mode:
@@ -418,6 +498,7 @@ def redirect_token(app_id: str, user: CurrentUser = Depends(get_current_user)):
 
 # ── Analysis ──────────────────────────────────────────────────────────────────
 router_analysis = APIRouter(prefix="/analysis", tags=["analysis"])
+
 
 @router_analysis.post("/vehicles")
 def get_vehicles(body: VehiclesRequest, user: CurrentUser = Depends(get_current_user)):
@@ -482,6 +563,7 @@ def get_statistics(body: StatisticsRequest, user: CurrentUser = Depends(get_curr
 # ── Alerts ────────────────────────────────────────────────────────────────────
 router_alerts = APIRouter(prefix="/alerts", tags=["alerts"])
 
+
 @router_alerts.get("")
 def list_alerts(
     catalog_name: Optional[str] = Query(None),
@@ -495,7 +577,7 @@ def list_alerts(
         items = [a for a in items if a["catalog_name"] == catalog_name]
     if status:
         items = [a for a in items if a["status"] == status]
-    return {"total": len(items), "items": items[offset: offset + limit]}
+    return {"total": len(items), "items": items[offset : offset + limit]}
 
 
 @router_alerts.get("/{alert_id}")
@@ -510,6 +592,7 @@ def get_alert(alert_id: str, user: CurrentUser = Depends(get_current_user)):
 # ── Admin ─────────────────────────────────────────────────────────────────────
 router_admin = APIRouter(prefix="/admin", tags=["admin"])
 
+
 @router_admin.get("/users")
 def list_users(
     q: Optional[str] = Query(None),
@@ -518,11 +601,35 @@ def list_users(
     user: CurrentUser = Depends(require_admin),
 ):
     # dev: return mock users
-    return {"total": 3, "items": [
-        {"user_id": "dev-user-001", "email": "dev@example.com", "display_name": "開発ユーザー", "is_admin": True, "catalog_count": 2, "last_login_at": _NOW().isoformat()},
-        {"user_id": "sato-001",    "email": "sato@co.jp",       "display_name": "佐藤 太郎",   "is_admin": False, "catalog_count": 0, "last_login_at": _NOW().isoformat()},
-        {"user_id": "tanaka-001",  "email": "tanaka@co.jp",     "display_name": "田中 三郎",   "is_admin": False, "catalog_count": 1, "last_login_at": _NOW().isoformat()},
-    ]}
+    return {
+        "total": 3,
+        "items": [
+            {
+                "user_id": "dev-user-001",
+                "email": "dev@example.com",
+                "display_name": "開発ユーザー",
+                "is_admin": True,
+                "catalog_count": 2,
+                "last_login_at": _NOW().isoformat(),
+            },
+            {
+                "user_id": "sato-001",
+                "email": "sato@co.jp",
+                "display_name": "佐藤 太郎",
+                "is_admin": False,
+                "catalog_count": 0,
+                "last_login_at": _NOW().isoformat(),
+            },
+            {
+                "user_id": "tanaka-001",
+                "email": "tanaka@co.jp",
+                "display_name": "田中 三郎",
+                "is_admin": False,
+                "catalog_count": 1,
+                "last_login_at": _NOW().isoformat(),
+            },
+        ],
+    }
 
 
 @router_admin.post("/notifications")
@@ -531,4 +638,5 @@ def send_notification(
     user: CurrentUser = Depends(require_admin),
 ):
     import uuid as _uuid
+
     return {"notification_ids": [str(_uuid.uuid4())], "recipient_count": 1}

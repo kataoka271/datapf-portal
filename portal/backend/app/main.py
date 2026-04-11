@@ -3,14 +3,20 @@ FastAPI application entry point.
 - uvicorn app.main:app --reload   →  local development server
 - Lambda handler via Mangum       →  AWS Lambda
 """
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.routers import (
-    router_auth, router_notifications, router_catalogs,
-    router_search, router_apps, router_analysis,
-    router_alerts, router_admin,
+    router_admin,
+    router_alerts,
+    router_analysis,
+    router_apps,
+    router_auth,
+    router_catalogs,
+    router_notifications,
+    router_search,
 )
 
 # ── App setup ─────────────────────────────────────────────────────────────────
@@ -31,14 +37,15 @@ app.add_middleware(
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 PREFIX = "/v1"
-app.include_router(router_auth,          prefix=PREFIX)
+app.include_router(router_auth, prefix=PREFIX)
 app.include_router(router_notifications, prefix=PREFIX)
-app.include_router(router_catalogs,      prefix=PREFIX)
-app.include_router(router_search,        prefix=PREFIX)
-app.include_router(router_apps,          prefix=PREFIX)
-app.include_router(router_analysis,      prefix=PREFIX)
-app.include_router(router_alerts,        prefix=PREFIX)
-app.include_router(router_admin,         prefix=PREFIX)
+app.include_router(router_catalogs, prefix=PREFIX)
+app.include_router(router_search, prefix=PREFIX)
+app.include_router(router_apps, prefix=PREFIX)
+app.include_router(router_analysis, prefix=PREFIX)
+app.include_router(router_alerts, prefix=PREFIX)
+app.include_router(router_admin, prefix=PREFIX)
+
 
 # ── Global error handler ──────────────────────────────────────────────────────
 @app.exception_handler(Exception)
@@ -48,13 +55,16 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": str(exc)},
     )
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
+
 # ── Lambda handler ────────────────────────────────────────────────────────────
 try:
     from mangum import Mangum
+
     handler = Mangum(app, lifespan="off")
 except ImportError:
     handler = None  # not running in Lambda

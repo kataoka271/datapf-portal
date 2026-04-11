@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
 from app.config import get_settings
-from app.models import CurrentUser, CatalogRole
+from app.models import CatalogRole, CurrentUser
 
 security = HTTPBearer(auto_error=False)
 
@@ -24,7 +26,7 @@ async def get_current_user(
             is_admin=True,
             catalog_roles=[
                 CatalogRole(catalog_name="vehicle_timeseries", role="owner"),
-                CatalogRole(catalog_name="fault_diagnostics",  role="viewer"),
+                CatalogRole(catalog_name="fault_diagnostics", role="viewer"),
             ],
         )
 
@@ -33,8 +35,8 @@ async def get_current_user(
 
     # Production token verification (IAM Identity Center JWKS)
     try:
-        from jose import jwt, JWTError
         import httpx
+        from jose import jwt
 
         jwks_resp = httpx.get(settings.oidc_jwks_uri, timeout=5)
         jwks_resp.raise_for_status()

@@ -3,9 +3,12 @@ Mock data returned when DEV_MODE=true and Databricks is not connected.
 Mirrors the real Delta Table schemas so switching to production only
 requires removing the dev_mode guard in each router.
 """
+
 from __future__ import annotations
+
+import math
+import random
 from datetime import datetime, timedelta, timezone
-import random, math
 
 _NOW = datetime.now(timezone.utc)
 
@@ -84,9 +87,21 @@ def mock_mou(catalog_name: str) -> dict:
 アクセス権限は本人のみに帰属し、共有は禁止します。
 """,
         "checklist": [
-            {"item_id": "ck-001", "label": "業務目的以外に使用しないことに同意する",         "required": True},
-            {"item_id": "ck-002", "label": "第三者への開示・共有をしないことに同意する",     "required": True},
-            {"item_id": "ck-003", "label": "セキュリティポリシーを理解していることを確認した", "required": False},
+            {
+                "item_id": "ck-001",
+                "label": "業務目的以外に使用しないことに同意する",
+                "required": True,
+            },
+            {
+                "item_id": "ck-002",
+                "label": "第三者への開示・共有をしないことに同意する",
+                "required": True,
+            },
+            {
+                "item_id": "ck-003",
+                "label": "セキュリティポリシーを理解していることを確認した",
+                "required": False,
+            },
         ],
         "updated_at": (_NOW - timedelta(days=3)).isoformat(),
     }
@@ -129,53 +144,99 @@ def mock_access_requests(catalog_name: str) -> list[dict]:
 
 def mock_members(catalog_name: str) -> list[dict]:
     return [
-        {"user_id": "watanabe-001", "email": "watanabe@co.jp", "display_name": "渡辺 次郎",
-         "role": "viewer", "approved_at": (_NOW - timedelta(days=7)).isoformat()},
-        {"user_id": "tanaka-001",   "email": "tanaka@co.jp",   "display_name": "田中 三郎",
-         "role": "editor", "approved_at": (_NOW - timedelta(days=30)).isoformat()},
+        {
+            "user_id": "watanabe-001",
+            "email": "watanabe@co.jp",
+            "display_name": "渡辺 次郎",
+            "role": "viewer",
+            "approved_at": (_NOW - timedelta(days=7)).isoformat(),
+        },
+        {
+            "user_id": "tanaka-001",
+            "email": "tanaka@co.jp",
+            "display_name": "田中 三郎",
+            "role": "editor",
+            "approved_at": (_NOW - timedelta(days=30)).isoformat(),
+        },
     ]
 
 
 def mock_search_results(query: str) -> dict:
     cols = [
-        {"catalog_name": "vehicle_timeseries", "schema_name": "drive",   "table_name": "metrics",
-         "column_name": "vehicle_speed", "description": "車両速度 (km/h)", "tags": ["speed"], "score": 0.94},
-        {"catalog_name": "vehicle_timeseries", "schema_name": "drive",   "table_name": "metrics",
-         "column_name": "accel_x",       "description": "前後加速度 (G)",   "tags": ["accel"], "score": 0.87},
-        {"catalog_name": "vehicle_timeseries", "schema_name": "drive",   "table_name": "dynamics",
-         "column_name": "lateral_g",     "description": "横加速度 (G)",     "tags": ["accel"], "score": 0.71},
-        {"catalog_name": "fault_diagnostics",  "schema_name": "sensors", "table_name": "wheel",
-         "column_name": "wheel_speed_fl","description": "左前輪速度 (rpm)", "tags": ["speed"], "score": 0.65},
+        {
+            "catalog_name": "vehicle_timeseries",
+            "schema_name": "drive",
+            "table_name": "metrics",
+            "column_name": "vehicle_speed",
+            "description": "車両速度 (km/h)",
+            "tags": ["speed"],
+            "score": 0.94,
+        },
+        {
+            "catalog_name": "vehicle_timeseries",
+            "schema_name": "drive",
+            "table_name": "metrics",
+            "column_name": "accel_x",
+            "description": "前後加速度 (G)",
+            "tags": ["accel"],
+            "score": 0.87,
+        },
+        {
+            "catalog_name": "vehicle_timeseries",
+            "schema_name": "drive",
+            "table_name": "dynamics",
+            "column_name": "lateral_g",
+            "description": "横加速度 (G)",
+            "tags": ["accel"],
+            "score": 0.71,
+        },
+        {
+            "catalog_name": "fault_diagnostics",
+            "schema_name": "sensors",
+            "table_name": "wheel",
+            "column_name": "wheel_speed_fl",
+            "description": "左前輪速度 (rpm)",
+            "tags": ["speed"],
+            "score": 0.65,
+        },
     ]
     rows = []
     for i in range(10):
         t = (_NOW - timedelta(seconds=10 - i)).replace(microsecond=0)
-        rows.append({
-            "timestamp": t.isoformat(),
-            "vehicle_id": "VH-0042",
-            "vehicle_speed": round(68.0 + random.uniform(-2, 4), 1),
-            "accel_x": round(random.uniform(0.05, 0.25), 3),
-        })
-    return {"matched_columns": cols, "preview_rows": rows, "join_key": "vehicle_id + timestamp"}
+        rows.append(
+            {
+                "timestamp": t.isoformat(),
+                "vehicle_id": "VH-0042",
+                "vehicle_speed": round(68.0 + random.uniform(-2, 4), 1),
+                "accel_x": round(random.uniform(0.05, 0.25), 3),
+            }
+        )
+    return {
+        "matched_columns": cols,
+        "preview_rows": rows,
+        "join_key": "vehicle_id + timestamp",
+    }
 
 
 def mock_vehicles(region: str) -> list[dict]:
     base_coords = {
-        "japan":         (35.68, 139.69),
-        "europe":        (48.85, 2.35),
+        "japan": (35.68, 139.69),
+        "europe": (48.85, 2.35),
         "north_america": (40.71, -74.01),
     }
     lat, lng = base_coords.get(region, (35.68, 139.69))
     vehicles = []
     for i in range(12):
-        vehicles.append({
-            "vehicle_id": f"VH-{i+1:04d}",
-            "latitude":   round(lat + random.uniform(-0.3, 0.3), 5),
-            "longitude":  round(lng + random.uniform(-0.3, 0.3), 5),
-            "heading":    round(random.uniform(0, 360), 1),
-            "speed_kmh":  round(random.uniform(0, 120), 1),
-            "recorded_at": _NOW.isoformat(),
-        })
+        vehicles.append(
+            {
+                "vehicle_id": f"VH-{i + 1:04d}",
+                "latitude": round(lat + random.uniform(-0.3, 0.3), 5),
+                "longitude": round(lng + random.uniform(-0.3, 0.3), 5),
+                "heading": round(random.uniform(0, 360), 1),
+                "speed_kmh": round(random.uniform(0, 120), 1),
+                "recorded_at": _NOW.isoformat(),
+            }
+        )
     return vehicles
 
 
@@ -185,12 +246,42 @@ def mock_vehicle_status(vehicle_id: str) -> dict:
         "recorded_at": _NOW.isoformat(),
         "has_video": True,
         "status_fields": [
-            {"column_name": "vehicle_speed",  "display_name": "車速",             "value": round(random.uniform(40, 100), 1), "unit": "km/h"},
-            {"column_name": "accel_x",        "display_name": "前後加速度",       "value": round(random.uniform(-0.3, 0.3), 3), "unit": "G"},
-            {"column_name": "engine_temp",    "display_name": "エンジン水温",     "value": round(random.uniform(80, 100), 1), "unit": "°C"},
-            {"column_name": "fuel_level",     "display_name": "燃料残量",         "value": round(random.uniform(20, 80), 1), "unit": "%"},
-            {"column_name": "rpm",            "display_name": "エンジン回転数",   "value": random.randint(1200, 4500), "unit": "rpm"},
-            {"column_name": "throttle",       "display_name": "スロットル開度",   "value": round(random.uniform(0, 60), 1), "unit": "%"},
+            {
+                "column_name": "vehicle_speed",
+                "display_name": "車速",
+                "value": round(random.uniform(40, 100), 1),
+                "unit": "km/h",
+            },
+            {
+                "column_name": "accel_x",
+                "display_name": "前後加速度",
+                "value": round(random.uniform(-0.3, 0.3), 3),
+                "unit": "G",
+            },
+            {
+                "column_name": "engine_temp",
+                "display_name": "エンジン水温",
+                "value": round(random.uniform(80, 100), 1),
+                "unit": "°C",
+            },
+            {
+                "column_name": "fuel_level",
+                "display_name": "燃料残量",
+                "value": round(random.uniform(20, 80), 1),
+                "unit": "%",
+            },
+            {
+                "column_name": "rpm",
+                "display_name": "エンジン回転数",
+                "value": random.randint(1200, 4500),
+                "unit": "rpm",
+            },
+            {
+                "column_name": "throttle",
+                "display_name": "スロットル開度",
+                "value": round(random.uniform(0, 60), 1),
+                "unit": "%",
+            },
         ],
     }
 
@@ -206,12 +297,14 @@ def mock_timeseries(vehicle_id: str, columns: list[str]) -> list[dict]:
             val = max(0, val + random.uniform(-3, 3))
             data.append({"timestamp": t.isoformat(), "value": round(val, 2)})
             t += timedelta(seconds=5)
-        series.append({
-            "column_full_name": col,
-            "display_name": col_name,
-            "unit": "km/h" if "speed" in col_name else None,
-            "data": data,
-        })
+        series.append(
+            {
+                "column_full_name": col,
+                "display_name": col_name,
+                "unit": "km/h" if "speed" in col_name else None,
+                "data": data,
+            }
+        )
     return series
 
 
@@ -221,28 +314,41 @@ def mock_statistics(columns: list[str]) -> list[dict]:
         col_name = col.split(".")[-1]
         vals = [random.gauss(65, 18) for _ in range(1000)]
         vals.sort()
-        def pct(p): return vals[int(len(vals) * p / 100)]
+
+        def pct(p):
+            return vals[int(len(vals) * p / 100)]
+
         hist = []
         lo, hi, bins = 0.0, 130.0, 10
         step = (hi - lo) / bins
         for b in range(bins):
             bs, be = lo + b * step, lo + (b + 1) * step
-            hist.append({"bin_start": round(bs, 1), "bin_end": round(be, 1),
-                         "count": sum(1 for v in vals if bs <= v < be)})
-        stats.append({
-            "column_full_name": col,
-            "display_name": col_name,
-            "count": len(vals),
-            "null_count": random.randint(0, 20),
-            "mean":   round(sum(vals) / len(vals), 3),
-            "stddev": round(math.sqrt(sum((v - sum(vals)/len(vals))**2 for v in vals) / len(vals)), 3),
-            "min":    round(vals[0], 3),
-            "p25":    round(pct(25), 3),
-            "p50":    round(pct(50), 3),
-            "p75":    round(pct(75), 3),
-            "max":    round(vals[-1], 3),
-            "histogram": hist,
-        })
+            hist.append(
+                {
+                    "bin_start": round(bs, 1),
+                    "bin_end": round(be, 1),
+                    "count": sum(1 for v in vals if bs <= v < be),
+                }
+            )
+        stats.append(
+            {
+                "column_full_name": col,
+                "display_name": col_name,
+                "count": len(vals),
+                "null_count": random.randint(0, 20),
+                "mean": round(sum(vals) / len(vals), 3),
+                "stddev": round(
+                    math.sqrt(sum((v - sum(vals) / len(vals)) ** 2 for v in vals) / len(vals)),
+                    3,
+                ),
+                "min": round(vals[0], 3),
+                "p25": round(pct(25), 3),
+                "p50": round(pct(50), 3),
+                "p75": round(pct(75), 3),
+                "max": round(vals[-1], 3),
+                "histogram": hist,
+            }
+        )
     return stats
 
 
