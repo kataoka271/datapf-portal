@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import {
   LineChart,
   Line,
@@ -32,48 +34,172 @@ const REGION_OPTIONS: { value: Region; label: string }[] = [
 
 const COLORS = ["#1D9E75", "#185FA5", "#BA7517", "#993556", "#534AB7"];
 
-// ── Vehicle map placeholder (deck.gl integration point) ───────────────────────
+const REGION_CENTERS: Record<Region, [number, number]> = {
+  japan: [139.69, 35.68],
+  europe: [2.35, 48.85],
+  north_america: [-74.01, 40.71],
+};
+
+// ── Vehicle map (maplibre-gl + OpenStreetMap tiles) ───────────────────────────
 function VehicleMap({
   vehicles,
   selectedId,
   onSelect,
+  region,
 }: {
   vehicles: { vehicle_id: string; latitude: number; longitude: number }[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  region: Region;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const vehiclesRef = useRef(vehicles);
+  vehiclesRef.current = vehicles;
+
+  // ── Initialize map once ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const center = REGION_CENTERS[region] ?? REGION_CENTERS.japan;
+
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: "raster",
+            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tileSize: 256,
+            attribution:
+              '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          },
+        },
+        layers: [{ id: "osm", type: "raster", source: "osm" }],
+      },
+      center,
+      zoom: 8,
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    mapRef.current = map;
+
+    const populateSource = () => {
+      const src = map.getSource("vehicles") as
+        | maplibregl.GeoJSONSource
+        | undefined;
+      if (!src) return;
+      src.setData({
+        type: "FeatureCollection",
+        features: vehiclesRef.current.map((v) => ({
+          type: "Feature" as const,
+          geometry: {
+            type: "Point" as const,
+            coordinates: [v.longitude, v.latitude],
+          },
+          properties: { vehicle_id: v.vehicle_id },
+        })),
+      });
+    };
+
+    map.on("load", () => {
+      map.addSource("vehicles", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: "vehicles-dot",
+        type: "circle",
+        source: "vehicles",
+        paint: {
+          "circle-radius": 7,
+          "circle-color": "#1D9E75",
+          "circle-stroke-color": "#fff",
+          "circle-stroke-width": 1.5,
+        },
+      });
+
+      populateSource();
+
+      map.on("click", "vehicles-dot", (e) => {
+        const id = e.features?.[0]?.properties?.vehicle_id;
+        if (id) onSelectRef.current(id);
+      });
+      map.on("mouseenter", "vehicles-dot", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "vehicles-dot", () => {
+        map.getCanvas().style.cursor = "";
+      });
+    });
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Update GeoJSON when vehicles change ──────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const src = map.getSource("vehicles") as
+      | maplibregl.GeoJSONSource
+      | undefined;
+    if (!src) return;
+    src.setData({
+      type: "FeatureCollection",
+      features: vehicles.map((v) => ({
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [v.longitude, v.latitude],
+        },
+        properties: { vehicle_id: v.vehicle_id },
+      })),
+    });
+  }, [vehicles]);
+
+  // ── Update paint when selectedId changes ─────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer("vehicles-dot")) return;
+    const sid = selectedId ?? "";
+    map.setPaintProperty("vehicles-dot", "circle-color", [
+      "case",
+      ["==", ["get", "vehicle_id"], sid],
+      "#E24B4A",
+      "#1D9E75",
+    ]);
+    map.setPaintProperty("vehicles-dot", "circle-radius", [
+      "case",
+      ["==", ["get", "vehicle_id"], sid],
+      10,
+      7,
+    ]);
+  }, [selectedId]);
+
+  // ── Fly to region center on region change ─────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.flyTo({
+      center: REGION_CENTERS[region] ?? REGION_CENTERS.japan,
+      zoom: 8,
+      duration: 800,
+    });
+  }, [region]);
+
   return (
     <div
-      className="relative bg-[#1a2d3a] rounded-xl overflow-hidden"
-      style={{ height: 260 }}
+      className="rounded-xl overflow-hidden border border-gray-100"
+      style={{ height: 520 }}
     >
-      <div className="absolute top-2 left-3 text-white/40 text-xs">
-        deck.gl / kepler.gl — {vehicles.length} 台
-      </div>
-      {/* Placeholder dots for prototype — replace with actual deck.gl DeckGL component */}
-      <svg className="absolute inset-0 w-full h-full">
-        {vehicles.map((v, _i) => {
-          const x = ((v.longitude - 130) / 15) * 100;
-          const y = ((50 - v.latitude) / 15) * 100;
-          const isSelected = v.vehicle_id === selectedId;
-          return (
-            <circle
-              key={v.vehicle_id}
-              cx={`${Math.min(Math.max(x, 5), 95)}%`}
-              cy={`${Math.min(Math.max(y, 5), 95)}%`}
-              r={isSelected ? 8 : 5}
-              fill={isSelected ? "#E24B4A" : "#1D9E75"}
-              stroke="#fff"
-              strokeWidth={isSelected ? 2 : 1}
-              className="cursor-pointer transition-all"
-              onClick={() => onSelect(v.vehicle_id)}
-            />
-          );
-        })}
-      </svg>
-      <div className="absolute bottom-2 right-3 text-white/30 text-xs">
-        {selectedId ? `選択中: ${selectedId}` : "車両をクリックして選択"}
-      </div>
+      <div ref={containerRef} className="w-full h-full" />
     </div>
   );
 }
@@ -309,7 +435,7 @@ export function VehicleAnalysis() {
           {isLoading ? (
             <div
               className="bg-[#1a2d3a] rounded-xl flex items-center justify-center"
-              style={{ height: 260 }}
+              style={{ height: 520 }}
             >
               <Spinner className="text-white" />
             </div>
@@ -318,6 +444,7 @@ export function VehicleAnalysis() {
               vehicles={vehiclesData?.vehicles ?? []}
               selectedId={selectedVehicleId}
               onSelect={setSelectedVehicleId}
+              region={region}
             />
           )}
           <TimeseriesChart />
