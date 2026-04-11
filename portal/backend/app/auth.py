@@ -24,16 +24,18 @@ async def get_current_user(
             is_admin=True,
             catalog_roles=[
                 CatalogRole(catalog_name="vehicle_timeseries", role="owner"),
-                CatalogRole(catalog_name="fault_diagnostics",  role="viewer"),
+                CatalogRole(catalog_name="fault_diagnostics", role="viewer"),
             ],
         )
 
     if not credentials:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="認証トークンが必要です")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="認証トークンが必要です"
+        )
 
     # Production token verification (IAM Identity Center JWKS)
     try:
-        from jose import jwt, JWTError
+        from jose import jwt
         import httpx
 
         jwks_resp = httpx.get(settings.oidc_jwks_uri, timeout=5)
@@ -59,5 +61,7 @@ async def get_current_user(
 
 def require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
     if not user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者権限が必要です")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="管理者権限が必要です"
+        )
     return user
