@@ -2,14 +2,14 @@
 
 ## 1. 概要・目的
 
-横断検索（横断検索）で選択したカラムを使い、**車両分析**と**統計分析**を一体的に行えるページ。
+横断検索で選択したカラムを使い、**車両分析**と**統計分析**を一体的に行えるページ。
 
 現状の課題：
 - 車両分析・統計分析ページはそれぞれ独立しており、カラム選択のフローが分断されている
 - 統計分析には独自の横断検索UIが組み込まれているが、車両分析と連携しない
 
 本ページの目的：
-- 「どのカラムを使うか（横断検索）」と「どう分析するか（車両/統計）」を一画面に統合
+- 「どのカラムを使うか（横断検索 → カラム登録）」と「どう分析するか（車両/統計）」を一画面に統合
 - マップで選択した車両を統計分析の車両フィルタとして自動連携させる
 
 ---
@@ -38,14 +38,16 @@
 │                        │  ─── 車両分析 ─────────────────────────────────── │
 │  [クエリ入力  ] [検索] │  リージョン / 時刻フィルタ                          │
 │                        │  ┌──── VehicleMap (3/5) ────────┐ ┌── Status ──┐   │
-│  ── 検索結果 ──        │  │   OpenStreetMap + 車両点      │ │ 車両ID     │   │
-│  ☑ vehicle_speed       │  │   クリックで選択 (赤くなる)   │ │ 各メトリクス│   │
+│  [すべて選択] [N件を登録]  │   OpenStreetMap + 車両点      │ │ 車両ID     │   │
+│  ☐ vehicle_speed       │  │   クリックで選択 (赤くなる)   │ │ 各メトリクス│   │
 │    ████████░░ 94%      │  └─────────────────────────────┘ └────────────┘   │
-│    speed               │  TimeseriesChart (選択カラムでプロット)              │
-│                        │                                                      │
-│  ☑ accel_x             │  ─── 統計分析 ─────────────────────────────────── │
-│    ██████░░░░ 81%      │  時間範囲フィルタ  [選択中: VH-0042 ×]  [分析実行] │
-│    accel                │  StatCard × N (ヒストグラム / 統計値タブ)           │
+│  ☐ accel_x             │  TimeseriesChart (登録カラムでプロット)              │
+│    ██████░░░░ 81%      │                                                      │
+│                        │  ─── 統計分析 ─────────────────────────────────── │
+│  ── 登録済みカラム(2) ──  時間範囲フィルタ  [選択中: VH-0042 ×]  [分析実行] │
+│  vehicle_speed    [×]  │  StatCard × N (ヒストグラム / 統計値タブ)           │
+│  accel_x          [×]  │                                                      │
+│  [すべて解除]          │                                                      │
 │                        │                                                      │
 │  [2件で分析]           │                                                      │
 └────────────────────────┴─────────────────────────────────────────────────────┘
@@ -53,33 +55,57 @@
 
 ---
 
-## 4. データフロー
+## 4. カラム登録フロー
 
 ```
-横断検索クエリ入力
-    ↓ POST /catalogs/search
-MatchedColumn[] 取得 → チェックボックスで選択
-    ↓
-selectedColumns (MatchedColumn[]) ← ページローカルstate
+1. 検索クエリ入力 → [検索] ボタン (または Enter)
+      ↓ POST /catalogs/search
+2. 検索結果一覧表示
+   ├─ 各カラムにチェックボックス
+   ├─ [すべて選択 / すべて解除] ボタン (検索結果を一括チェック)
+   └─ [N件を登録] ボタン → 登録済みカラム一覧に追加・checkedCols クリア
 
-[車両分析パネル]
-  region, atTime → POST /analysis/vehicles → VehicleMap
-  マップクリック → selectedVehicleId (useAnalysisStore)
-  selectedVehicleId → GET /analysis/vehicles/{id}/status
-  selectedVehicleId + selectedColumns → POST /analysis/vehicles/{id}/timeseries
-                                        (column_full_name をカラムキーとして渡す)
+3. 登録済みカラム一覧
+   ├─ 各カラムに [×] ボタン → 個別登録解除
+   └─ [すべて解除] ボタン → 一括クリア
 
-[統計分析パネル]
-  selectedColumns + region + time_from + time_to + selectedVehicleId
-    → POST /analysis/statistics
-    → StatCard × N
+4. [N件で分析] ボタン → 車両分析 + 統計分析パネルを表示
+```
+
+**状態の分離:**
+
+| 状態 | 保持場所 | 役割 |
+|---|---|---|
+| `checkedCols` | `ColumnSearchPanel` ローカル | 現在の検索結果でチェック中（一時的） |
+| `registeredColumns` | `CrossAnalysis` | 分析に使う登録済みカラム（永続） |
+
+- 新規検索を実行すると `checkedCols` はリセット（登録済みカラムは維持）
+- 「登録」でチェック済みカラムを重複なく登録リストに追加し、チェックをクリア
+
+---
+
+## 5. データフロー
+
+```
+登録済みカラム (registeredColumns: MatchedColumn[])
+    │
+    ├─ [車両分析パネル]
+    │   region, atTime → POST /analysis/vehicles → VehicleMap
+    │   マップクリック → selectedVehicleId (useAnalysisStore)
+    │   selectedVehicleId → GET /analysis/vehicles/{id}/status
+    │   selectedVehicleId + registeredColumns.column_full_name
+    │       → POST /analysis/vehicles/{id}/timeseries
+    │
+    └─ [統計分析パネル]
+        registeredColumns + region + time_from + time_to + selectedVehicleId
+            → POST /analysis/statistics → StatCard × N
 ```
 
 **連携ポイント**: `selectedVehicleId` (Zustand `useAnalysisStore`) が車両分析・統計分析の両パネルで共有される。マップで車両を選択すると、統計パネルの「選択中: VH-xxxx」バッジが自動更新される。バッジの [×] を押すと全車両対象に戻る。
 
 ---
 
-## 5. API連携
+## 6. API連携
 
 | エンドポイント | 使用パネル | 変更 |
 |---|---|---|
@@ -92,35 +118,34 @@ selectedColumns (MatchedColumn[]) ← ページローカルstate
 ### `POST /analysis/statistics` の変更点
 
 ```json
-// リクエスト (変更後)
 {
   "region": "japan",
   "time_from": "2026-04-05T00:00:00Z",
   "time_to": "2026-04-12T00:00:00Z",
   "columns": ["vehicle_timeseries.drive.metrics.vehicle_speed"],
-  "vehicle_id": "VH-0042"   // ← 追加 (null / 未指定 = 全車両)
+  "vehicle_id": "VH-0042"
 }
 ```
 
-`vehicle_id` が指定された場合、Databricks SQL の WHERE 句に `vehicle_id = ?` を追加する（モックでは無視）。
+`vehicle_id` が指定された場合、Databricks SQL の WHERE 句に `vehicle_id = ?` を追加する（モックでは無視、`null` / 未指定 = 全車両）。
 
 ---
 
-## 6. エラー・ローディング状態
+## 7. エラー・ローディング状態
 
 | 状態 | 表示 |
 |---|---|
 | 横断検索中 | Spinner |
-| 検索結果なし | グレーテキスト「検索キーワードを入力してください」 |
-| カラム未選択でページ表示 | EmptyState「横断検索でカラムを選択してください」 |
+| 検索結果なし（未検索） | グレーテキスト「検索キーワードを入力してください」 |
+| カラム未登録でページ表示 | EmptyState「横断検索でカラムを登録してください」 |
 | 車両未選択 | Status パネルに EmptyState「地図上の車両をクリック…」 |
 | 統計未実行 | EmptyState「分析実行ボタンを押してください」 |
 | 統計実行中 | Spinner |
-| 統計エラー | useUIStore.addToast({ type: "error" }) |
+| 統計エラー | `useUIStore.addToast({ type: "error" })` |
 
 ---
 
-## 7. 変更ファイル一覧
+## 8. 変更ファイル一覧
 
 | ファイル | 変更種別 |
 |---|---|

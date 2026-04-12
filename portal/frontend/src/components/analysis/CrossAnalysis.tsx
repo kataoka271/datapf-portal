@@ -45,30 +45,87 @@ const REGION_CENTERS: Record<Region, [number, number]> = {
   north_america: [-74.01, 40.71],
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const colKey = (c: MatchedColumn) =>
+  `${c.catalog_name}.${c.schema_name}.${c.table_name}.${c.column_name}`;
+
+// ── Checkbox icon ─────────────────────────────────────────────────────────────
+function Checkbox({ checked }: { checked: boolean }) {
+  return (
+    <div
+      className={`w-3.5 h-3.5 flex-shrink-0 rounded border flex items-center justify-center transition-colors ${
+        checked ? "bg-teal-600 border-teal-700" : "border-gray-300 bg-white"
+      }`}
+    >
+      {checked && (
+        <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 10" fill="none">
+          <path
+            d="M1.5 5l2.5 2.5 4.5-4.5"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+    </div>
+  );
+}
+
 // ── Column search panel (left sidebar) ───────────────────────────────────────
 function ColumnSearchPanel({
-  selectedColumns,
-  onToggle,
+  registeredColumns,
+  onRegister,
+  onUnregister,
+  onClearAll,
   onAnalyze,
 }: {
-  selectedColumns: MatchedColumn[];
-  onToggle: (col: MatchedColumn) => void;
+  registeredColumns: MatchedColumn[];
+  onRegister: (cols: MatchedColumn[]) => void;
+  onUnregister: (col: MatchedColumn) => void;
+  onClearAll: () => void;
   onAnalyze: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const [checkedCols, setCheckedCols] = useState<MatchedColumn[]>([]);
   const search = useCrossSearch();
 
-  const isSelected = (col: MatchedColumn) =>
-    selectedColumns.some(
-      (c) =>
-        c.catalog_name === col.catalog_name &&
-        c.schema_name === col.schema_name &&
-        c.table_name === col.table_name &&
-        c.column_name === col.column_name,
+  // Reset checked state when search results change
+  useEffect(() => {
+    setCheckedCols([]);
+  }, [search.data]);
+
+  const results = search.data?.matched_columns ?? [];
+  const isChecked = (col: MatchedColumn) =>
+    checkedCols.some((c) => colKey(c) === colKey(col));
+  const allChecked =
+    results.length > 0 && results.every((c) => isChecked(c));
+
+  const toggleCheck = (col: MatchedColumn) => {
+    const key = colKey(col);
+    setCheckedCols((prev) =>
+      prev.some((c) => colKey(c) === key)
+        ? prev.filter((c) => colKey(c) !== key)
+        : [...prev, col],
     );
+  };
+
+  const toggleSelectAll = () => {
+    setCheckedCols(allChecked ? [] : [...results]);
+  };
+
+  const handleRegister = () => {
+    onRegister(checkedCols);
+    setCheckedCols([]);
+  };
+
+  const handleSearch = () => {
+    if (query) search.mutate({ query });
+  };
 
   return (
     <div className="w-72 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col h-full">
+      {/* Search input */}
       <div className="p-4 border-b border-gray-100 space-y-2">
         <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
           カラム検索
@@ -77,16 +134,14 @@ function ColumnSearchPanel({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) =>
-              e.key === "Enter" && query && search.mutate({ query })
-            }
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="例: 車速、加速度..."
             className="flex-1 h-8 px-3 text-xs border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-400 outline-none focus:border-teal-400"
           />
           <Button
             size="sm"
             variant="primary"
-            onClick={() => query && search.mutate({ query })}
+            onClick={handleSearch}
             loading={search.isPending}
           >
             検索
@@ -94,7 +149,9 @@ function ColumnSearchPanel({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-1">
+      {/* Scrollable area: results + registry */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {/* ── Search results ── */}
         {search.isPending && (
           <div className="flex justify-center py-6">
             <Spinner />
@@ -105,94 +162,140 @@ function ColumnSearchPanel({
             検索キーワードを入力してください
           </p>
         )}
-        {(search.data?.matched_columns ?? []).map((col, i) => {
-          const selected = isSelected(col);
-          return (
-            <button
-              key={i}
-              onClick={() => onToggle(col)}
-              className={`w-full text-left px-2.5 py-2.5 rounded-lg border transition-colors ${
-                selected
-                  ? "bg-teal-50 border-teal-300"
-                  : "border-gray-100 hover:border-teal-200 hover:bg-teal-50/50"
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <div
-                  className={`mt-0.5 w-3.5 h-3.5 flex-shrink-0 rounded border flex items-center justify-center ${
-                    selected
-                      ? "bg-teal-600 border-teal-700"
-                      : "border-gray-300"
-                  }`}
-                >
-                  {selected && (
-                    <svg
-                      className="w-2.5 h-2.5 text-white"
-                      viewBox="0 0 10 10"
-                      fill="none"
-                    >
-                      <path
-                        d="M1.5 5l2.5 2.5 4.5-4.5"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-gray-900 font-mono truncate">
-                    {col.column_name}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {col.catalog_name}.{col.schema_name}.{col.table_name}
-                  </p>
-                  {col.description && (
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">
-                      {col.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-teal-500 rounded-full"
-                        style={{ width: `${Math.round(col.score * 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] text-gray-400 flex-shrink-0">
-                      {Math.round(col.score * 100)}%
-                    </span>
+        {results.length > 0 && (
+          <div className="p-3 space-y-1">
+            {/* Select-all + register bar */}
+            <div className="flex items-center justify-between mb-2">
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-600 transition-colors"
+              >
+                <Checkbox checked={allChecked} />
+                {allChecked ? "すべて解除" : "すべて選択"}
+              </button>
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={checkedCols.length === 0}
+                onClick={handleRegister}
+              >
+                {checkedCols.length > 0
+                  ? `${checkedCols.length} 件を登録`
+                  : "登録"}
+              </Button>
+            </div>
+
+            {results.map((col, i) => (
+              <button
+                key={i}
+                onClick={() => toggleCheck(col)}
+                className={`w-full text-left px-2.5 py-2.5 rounded-lg border transition-colors ${
+                  isChecked(col)
+                    ? "bg-teal-50 border-teal-300"
+                    : "border-gray-100 hover:border-teal-200 hover:bg-teal-50/50"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5">
+                    <Checkbox checked={isChecked(col)} />
                   </div>
-                  {col.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {col.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded-full"
-                        >
-                          {tag}
-                        </span>
-                      ))}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-900 font-mono truncate">
+                      {col.column_name}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {col.catalog_name}.{col.schema_name}.{col.table_name}
+                    </p>
+                    {col.description && (
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">
+                        {col.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-teal-500 rounded-full"
+                          style={{
+                            width: `${Math.round(col.score * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-gray-400 flex-shrink-0">
+                        {Math.round(col.score * 100)}%
+                      </span>
                     </div>
-                  )}
+                    {col.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {col.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded-full"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </button>
-          );
-        })}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Registered columns ── */}
+        {registeredColumns.length > 0 && (
+          <div className="border-t border-gray-100 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-gray-600">
+                登録済みカラム ({registeredColumns.length})
+              </p>
+              <button
+                onClick={onClearAll}
+                className="text-xs text-red-400 hover:text-red-600 transition-colors"
+              >
+                すべて解除
+              </button>
+            </div>
+            <div className="space-y-1">
+              {registeredColumns.map((col, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-teal-50 border border-teal-100"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-900 font-mono truncate">
+                      {col.column_name}
+                    </p>
+                    <p className="text-[10px] text-gray-400 truncate">
+                      {col.catalog_name}.{col.schema_name}.{col.table_name}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onUnregister(col)}
+                    className="text-gray-300 hover:text-red-400 transition-colors text-base leading-none flex-shrink-0"
+                    title="登録解除"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Analyze button */}
       <div className="p-3 border-t border-gray-100">
         <Button
           variant="primary"
           className="w-full"
-          disabled={selectedColumns.length === 0}
+          disabled={registeredColumns.length === 0}
           onClick={onAnalyze}
         >
-          {selectedColumns.length > 0
-            ? `${selectedColumns.length} 件で分析`
-            : "カラムを選択してください"}
+          {registeredColumns.length > 0
+            ? `${registeredColumns.length} 件で分析`
+            : "カラムを登録してください"}
         </Button>
       </div>
     </div>
@@ -360,11 +463,10 @@ function VehicleStatusPanel({ atTime }: { atTime: string }) {
     selectedVehicleId,
     atTime + ":00Z",
   );
-  const [videoOpen, setVideoOpen] = useState(false);
   const { data: video } = useVehicleVideo(
     selectedVehicleId,
     atTime + ":00Z",
-    videoOpen,
+    !!status?.has_video,
   );
 
   if (!selectedVehicleId) {
@@ -411,36 +513,9 @@ function VehicleStatusPanel({ atTime }: { atTime: string }) {
           </div>
         ))}
       </div>
-      {status?.has_video && (
-        <Button
-          variant="secondary"
-          className="w-full text-xs"
-          onClick={() => setVideoOpen(true)}
-        >
-          動画を見る
-        </Button>
-      )}
-      {videoOpen && video && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-black rounded-xl overflow-hidden w-full max-w-2xl">
-            <div className="flex justify-between p-2">
-              <span className="text-white/70 text-xs">
-                {selectedVehicleId} — 車載動画
-              </span>
-              <button
-                onClick={() => setVideoOpen(false)}
-                className="text-white/70 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            <video
-              src={video.presigned_url}
-              controls
-              className="w-full"
-              style={{ maxHeight: "60vh" }}
-            />
-          </div>
+      {video && (
+        <div className="rounded-lg overflow-hidden bg-black">
+          <video src={video.presigned_url} controls className="w-full" />
         </div>
       )}
     </div>
@@ -691,7 +766,7 @@ function StatisticsPanel({ selectedColumns }: { selectedColumns: MatchedColumn[]
 
   const handleRun = () => {
     if (selectedColumns.length === 0) {
-      addToast({ type: "error", message: "左パネルでカラムを選択してください" });
+      addToast({ type: "error", message: "左パネルでカラムを登録してください" });
       return;
     }
     stats.mutate(
@@ -761,12 +836,12 @@ function StatisticsPanel({ selectedColumns }: { selectedColumns: MatchedColumn[]
         <EmptyState
           title={
             selectedColumns.length === 0
-              ? "カラムを選択して分析を実行してください"
+              ? "カラムを登録して分析を実行してください"
               : "「分析実行」ボタンを押してください"
           }
           description={
             selectedColumns.length === 0
-              ? "左パネルの横断検索でカラムを選択してください"
+              ? "左パネルの横断検索でカラムを登録してください"
               : selectedVehicleId
                 ? `車両 ${selectedVehicleId} でフィルタして集計します`
                 : "全車両を対象に集計します"
@@ -789,20 +864,27 @@ function StatisticsPanel({ selectedColumns }: { selectedColumns: MatchedColumn[]
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function CrossAnalysis() {
-  const [selectedColumns, setSelectedColumns] = useState<MatchedColumn[]>([]);
+  const [registeredColumns, setRegisteredColumns] = useState<MatchedColumn[]>([]);
   const [analyzed, setAnalyzed] = useState(false);
 
-  const toggleColumn = (col: MatchedColumn) => {
-    setAnalyzed(false);
-    setSelectedColumns((prev) => {
-      const key = `${col.catalog_name}.${col.schema_name}.${col.table_name}.${col.column_name}`;
-      const exists = prev.some(
-        (c) =>
-          `${c.catalog_name}.${c.schema_name}.${c.table_name}.${c.column_name}` ===
-          key,
-      );
-      return exists ? prev.filter((c) => `${c.catalog_name}.${c.schema_name}.${c.table_name}.${c.column_name}` !== key) : [...prev, col];
+  const handleRegister = (cols: MatchedColumn[]) => {
+    setRegisteredColumns((prev) => {
+      const next = [...prev];
+      cols.forEach((col) => {
+        if (!next.some((c) => colKey(c) === colKey(col))) next.push(col);
+      });
+      return next;
     });
+  };
+
+  const handleUnregister = (col: MatchedColumn) => {
+    setRegisteredColumns((prev) => prev.filter((c) => colKey(c) !== colKey(col)));
+    setAnalyzed(false);
+  };
+
+  const handleClearAll = () => {
+    setRegisteredColumns([]);
+    setAnalyzed(false);
   };
 
   const handleAnalyze = () => {
@@ -812,33 +894,35 @@ export function CrossAnalysis() {
   return (
     <div className="flex h-full overflow-hidden">
       <ColumnSearchPanel
-        selectedColumns={selectedColumns}
-        onToggle={toggleColumn}
+        registeredColumns={registeredColumns}
+        onRegister={handleRegister}
+        onUnregister={handleUnregister}
+        onClearAll={handleClearAll}
         onAnalyze={handleAnalyze}
       />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
         <PageHeader title="横断分析" />
 
-        {!analyzed && selectedColumns.length === 0 && (
+        {!analyzed && registeredColumns.length === 0 && (
           <div className="flex items-center justify-center py-24">
             <EmptyState
-              title="横断検索でカラムを選択してください"
-              description="左パネルでキーワードを入力し、分析に使うカラムを選択してください"
+              title="横断検索でカラムを登録してください"
+              description="左パネルでキーワードを検索し、カラムを選択して登録してください"
             />
           </div>
         )}
 
-        {(analyzed || selectedColumns.length > 0) && (
+        {(analyzed || registeredColumns.length > 0) && (
           <>
             <section>
-              <VehiclePanel selectedColumns={selectedColumns} />
+              <VehiclePanel selectedColumns={registeredColumns} />
             </section>
 
             <div className="border-t border-gray-100" />
 
             <section>
-              <StatisticsPanel selectedColumns={selectedColumns} />
+              <StatisticsPanel selectedColumns={registeredColumns} />
             </section>
           </>
         )}
