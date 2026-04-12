@@ -312,12 +312,20 @@
   "scene_id": "f3a2b1c0-1234-5678-abcd-000000000001",
   "clip_url": "https://portal-vehicle-videos.s3.amazonaws.com/...",
   "clip_start_at": "2026-04-09T10:23:30Z",
-  "clip_end_at": "2026-04-09T10:24:00Z"
+  "clip_end_at": "2026-04-09T10:24:00Z",
+  "seek_to_sec": 608.0
 }
 ```
 
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `clip_url` | string | `browser_seek` 時: 元動画の presigned URL / `pre_cut` 時: クリップ動画の presigned URL |
+| `clip_start_at` | string | クリップ開始日時（ISO 8601 UTC） |
+| `clip_end_at` | string | クリップ終了日時（ISO 8601 UTC） |
+| `seek_to_sec` | float | `browser_seek` 時のみ: フロントエンドが `video.currentTime` にセットする秒数（`clip_offset_sec - window_sec`）。`pre_cut` 時は `0.0` |
+
 **バックエンド処理**
-- `VectorSearchBackend.get_frame_by_id(scene_id)` でフレームメタデータ（`clip_s3_key` / `clip_offset_sec`）を取得
+- `VectorSearchBackend.get_frame_by_id(scene_id)` でフレームメタデータ（`video_s3_key` / `clip_s3_key` / `clip_offset_sec`）を取得
 - `clip_offset_sec ± window_sec` を `clip_start_at` / `clip_end_at` として算出してレスポンスに含める
 - クリップの提供方式は `CLIP_MODE` 設定に従う（下記 Section 8.6 参照）
 
@@ -389,7 +397,8 @@ client.put_vectors(
                 "latitude":         str(latitude),
                 "longitude":        str(longitude),
                 "thumbnail_s3_key": thumbnail_s3_key,
-                "clip_s3_key":      clip_s3_key,
+                "video_s3_key":     video_s3_key,      # 元動画（browser_seek 用）
+                "clip_s3_key":      clip_s3_key,       # 切り出しクリップ（pre_cut 用）
                 "clip_offset_sec":  str(clip_offset_sec),
                 "catalog_name":     catalog_name,
                 "embed_mode":       embed_mode,
@@ -434,6 +443,7 @@ scenes = [
         "latitude":        float(v["Metadata"]["latitude"]),
         "longitude":       float(v["Metadata"]["longitude"]),
         "thumbnail_s3_key": v["Metadata"]["thumbnail_s3_key"],
+        "video_s3_key":     v["Metadata"]["video_s3_key"],
         "clip_s3_key":      v["Metadata"]["clip_s3_key"],
         "clip_offset_sec":  float(v["Metadata"]["clip_offset_sec"]),
     }
@@ -521,7 +531,8 @@ client.upsert(
                 "latitude":         latitude,
                 "longitude":        longitude,
                 "thumbnail_s3_key": thumbnail_s3_key,
-                "clip_s3_key":      clip_s3_key,
+                "video_s3_key":     video_s3_key,     # 元動画（browser_seek 用）
+                "clip_s3_key":      clip_s3_key,      # 切り出しクリップ（pre_cut 用）
                 "clip_offset_sec":  clip_offset_sec,
                 "catalog_name":     catalog_name,
                 "embed_mode":       embed_mode,
@@ -569,6 +580,7 @@ scenes = [
         "latitude":         r.payload["latitude"],
         "longitude":        r.payload["longitude"],
         "thumbnail_s3_key": r.payload["thumbnail_s3_key"],
+        "video_s3_key":     r.payload["video_s3_key"],
         "clip_s3_key":      r.payload["clip_s3_key"],
         "clip_offset_sec":  r.payload["clip_offset_sec"],
     }
@@ -606,7 +618,8 @@ CREATE TABLE video_frames (
     latitude         DOUBLE PRECISION,
     longitude        DOUBLE PRECISION,
     thumbnail_s3_key TEXT,
-    clip_s3_key      TEXT,
+    video_s3_key     TEXT,          -- 元動画 S3 キー（browser_seek 用）
+    clip_s3_key      TEXT,          -- 切り出しクリップ S3 キー（pre_cut 用）
     clip_offset_sec  DOUBLE PRECISION,
     embedding        vector(512),   -- FRAME_EMBED_DIM と合わせる
     catalog_name     TEXT NOT NULL,
@@ -625,16 +638,34 @@ CREATE INDEX ON video_frames (vehicle_id);
 
 **検索クエリ**
 
-```sql
-SELECT frame_id, vehicle_id, recorded_at, latitude, longitude,
-       thumbnail_s3_key, clip_s3_key, clip_offset_sec,
-       1 - (embedding <=> $1::vector) AS similarity_score
-FROM video_frames
-WHERE catalog_name = ANY($2)
-  AND recorded_at BETWEEN $3 AND $4
-  AND 1 - (embedding <=> $1::vector) >= $5
-ORDER BY embedding <=> $1::vector
-LIMIT $6;
+`time_from` / `time_to` / `vehicle_ids` はオプション引数のため、Python 側で動的に WHERE 句を組み立てる。
+
+```python
+# pgvector 検索（PgVectorBackend.search() 内）
+conditions = ["catalog_name = ANY(%s)", "1 - (embedding <=> %s::vector) >= %s"]
+params: list = [catalog_names, query_vector, score_threshold]
+
+if time_from and time_to:
+    conditions.append("recorded_at BETWEEN %s AND %s")
+    params.extend([time_from, time_to])
+
+if vehicle_ids:
+    conditions.append("vehicle_id = ANY(%s)")
+    params.append(vehicle_ids)
+
+params.append(limit)  # LIMIT 用
+
+sql = f"""
+    SELECT frame_id, vehicle_id, recorded_at, latitude, longitude,
+           thumbnail_s3_key, video_s3_key, clip_s3_key, clip_offset_sec,
+           1 - (embedding <=> %s::vector) AS similarity_score
+    FROM video_frames
+    WHERE {" AND ".join(conditions)}
+    ORDER BY embedding <=> %s::vector
+    LIMIT %s
+"""
+# %s の順序に注意: SELECT 句の embedding %s と WHERE 句の embedding %s で
+# query_vector を 2 回バインドする必要がある
 ```
 
 **RDS インスタンス推奨**
@@ -646,7 +677,7 @@ LIMIT $6;
 
 ---
 
-### 7.4 Databricks Vector Search バックエンド
+### 7.5 Databricks Vector Search バックエンド
 
 大規模・スケールアウトが必要な段階で移行する。
 
@@ -668,7 +699,8 @@ LIMIT $6;
 | latitude | DOUBLE | 撮影時の車両緯度 |
 | longitude | DOUBLE | 撮影時の車両経度 |
 | thumbnail_s3_key | STRING | サムネイル画像の S3 キー |
-| clip_s3_key | STRING | クリップ動画ファイルの S3 キー |
+| video_s3_key | STRING | 元動画ファイルの S3 キー（`browser_seek` 用） |
+| clip_s3_key | STRING | 切り出しクリップ動画の S3 キー（`pre_cut` 用） |
 | clip_offset_sec | DOUBLE | 動画ファイル内でのフレーム位置（秒） |
 | embedding | ARRAY\<FLOAT\> | フレーム埋め込みベクトル（次元数はモデル依存） |
 | catalog_name | STRING | アクセス制御に使うカタログ名 |
@@ -676,9 +708,86 @@ LIMIT $6;
 
 PARTITION: `DATE(recorded_at)` / ZORDER: `vehicle_id`
 
+**パイプラインからの書き込み**
+
+```python
+from databricks.sdk import WorkspaceClient
+
+# Delta Table に Spark DataFrame として書き込む（パイプライン Worker 内）
+df = spark.createDataFrame(frame_rows)
+(df.write
+   .format("delta")
+   .mode("append")
+   .option("mergeSchema", "false")
+   .saveAsTable(f"{data_catalog}.video.frame_embeddings"))
+
+# Vector Search インデックスを手動トリガー（Triggered Sync）
+ws = WorkspaceClient()
+ws.vector_search_indexes.sync(index_name=settings.databricks_vector_search_index)
+```
+
+**Lambda からの検索クエリ**
+
+```python
+from databricks.vector_search.client import VectorSearchClient
+
+client = VectorSearchClient()
+index = client.get_index(
+    endpoint_name=settings.databricks_vector_search_endpoint,
+    index_name=settings.databricks_vector_search_index,
+)
+
+filters = {"catalog_name": catalog_names}  # ANY(list) はリストで渡す
+if time_from and time_to:
+    filters["recorded_at >="] = time_from
+    filters["recorded_at <="] = time_to
+if vehicle_ids:
+    filters["vehicle_id"] = vehicle_ids
+
+results = index.similarity_search(
+    query_vector=query_vector,
+    columns=["frame_id", "vehicle_id", "recorded_at", "latitude", "longitude",
+             "thumbnail_s3_key", "video_s3_key", "clip_s3_key", "clip_offset_sec"],
+    filters=filters,
+    num_results=limit,
+    score_threshold=score_threshold,
+)
+
+scenes = [
+    {
+        "scene_id":         row["frame_id"],
+        "vehicle_id":       row["vehicle_id"],
+        "recorded_at":      row["recorded_at"],
+        "similarity_score": row["score"],
+        "latitude":         row["latitude"],
+        "longitude":        row["longitude"],
+        "thumbnail_s3_key": row["thumbnail_s3_key"],
+        "video_s3_key":     row["video_s3_key"],
+        "clip_s3_key":      row["clip_s3_key"],
+        "clip_offset_sec":  row["clip_offset_sec"],
+    }
+    for row in results.get("result", {}).get("data_array", [])
+]
+```
+
+**単一フレーム取得**
+
+```python
+# Delta Table から直接取得（Vector Search index 経由では ID 検索できないため）
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.sql import StatementState
+
+ws = WorkspaceClient()
+stmt = ws.statement_execution.execute_statement(
+    warehouse_id=settings.databricks_warehouse_id,
+    statement=f"SELECT * FROM {data_catalog}.video.frame_embeddings WHERE frame_id = '{scene_id}'",
+)
+frame = stmt.result.data_array[0]
+```
+
 ---
 
-### 7.5 アクセス制御
+### 7.6 アクセス制御
 
 バックエンド共通。
 
@@ -716,7 +825,8 @@ S3 (動画アップロード)
                           │     (HuggingFace Hub からロード) │
                           │  5. S3 にサムネイル・クリップ保存│
                           │  6. ベクターバックエンドに書き込み│
-                          │     (pgvector / Databricks)   │
+                          │     S3 Vectors / Qdrant /     │
+                          │     pgvector / Databricks     │
                           │  7. SQS メッセージ削除          │
                           └───────────────────────────────┘
 ```
@@ -787,7 +897,7 @@ ffmpeg -ss {offset - window} -i input.mp4 -t {window * 2} -c copy clip.mp4
 
 ---
 
-## 8. エラー・ローディング状態
+## 9. エラー・ローディング状態
 
 | 状態 | 表示 |
 |---|---|
@@ -804,7 +914,7 @@ ffmpeg -ss {offset - window} -i input.mp4 -t {window * 2} -c copy clip.mp4
 
 ---
 
-## 9. フロントエンド実装仕様
+## 10. フロントエンド実装仕様
 
 ### 新規ファイル
 
@@ -890,7 +1000,7 @@ const sceneTimeTo = scenes.length > 0
 
 ---
 
-## 10. バックエンド実装仕様
+## 11. バックエンド実装仕様
 
 ### 新規エンドポイント（routers.py に追加）
 
@@ -938,11 +1048,15 @@ def mock_scene_search(query: str, catalog_names: list[str], limit: int) -> list[
     ]
 
 def mock_scene_clip(scene_id: str, window_sec: int) -> dict:
+    # dev モードでは実際の動画がないため seek_to_sec=0 の静止画 URL を返す。
+    # フロントエンドは <video> で読み込みエラーになるが、動作確認上は許容する。
+    # 実動画でのテストは DEV_MODE=false + 実 S3 環境で行うこと。
     return {
         "scene_id": scene_id,
-        "clip_url": f"https://picsum.photos/seed/{scene_id}/320/180",  # dev: 静止画で代替
+        "clip_url": f"https://picsum.photos/seed/{scene_id}/320/180",  # 静止画 URL（<video> 非対応）
         "clip_start_at": "2026-04-09T10:23:30Z",
         "clip_end_at": "2026-04-09T10:24:00Z",
+        "seek_to_sec": 0.0,
     }
 ```
 
@@ -1143,7 +1257,7 @@ def get_scene_clip(scene_id: str, window_sec: int = 15,
 
 ---
 
-## 11. ディレクトリ構成
+## 12. ディレクトリ構成
 
 `pipeline/` と `embedding_lambda/` は `backend/` と独立したデプロイ単位のため `portal/` 直下に並列配置する。
 `backend/` に混在させると Lambda パッケージに torch / ffmpeg が混入してサイズ上限（250 MB）を超えるため。
@@ -1225,7 +1339,7 @@ datapf-portal/
 
 ---
 
-## 12. 変更ファイル一覧
+## 13. 変更ファイル一覧
 
 ### portal/backend/（ポータル Lambda）
 
