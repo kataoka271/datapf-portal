@@ -99,6 +99,12 @@ function ColumnSearchPanel({
   const getCatalogStatus = (catalogName: string) =>
     catalogsData?.items.find((c) => c.catalog_name === catalogName);
 
+  const hasAccess = (catalogName: string) => {
+    const catInfo = getCatalogStatus(catalogName);
+    if (!catInfo) return true;
+    return ["owner", "editor", "viewer"].includes(catInfo.my_role);
+  };
+
   // Reset checked state when search results change
   useEffect(() => {
     setCheckedCols([]);
@@ -106,18 +112,25 @@ function ColumnSearchPanel({
 
   const results = search.data?.matched_columns ?? [];
 
-  const visibleResults = showUnapplied
-    ? results
-    : results.filter((col) => {
-        const catInfo = getCatalogStatus(col.catalog_name);
-        if (!catInfo) return true;
-        return ["owner", "editor", "viewer"].includes(catInfo.my_role);
-      });
+  const visibleResults = (
+    showUnapplied
+      ? results
+      : results.filter((col) => {
+          const catInfo = getCatalogStatus(col.catalog_name);
+          if (!catInfo) return true;
+          return ["owner", "editor", "viewer"].includes(catInfo.my_role);
+        })
+  ).filter((col) => !registeredColumns.some((r) => colKey(r) === colKey(col)));
 
   const isChecked = (col: MatchedColumn) =>
     checkedCols.some((c) => colKey(c) === colKey(col));
+
+  const selectableResults = visibleResults.filter((col) =>
+    hasAccess(col.catalog_name),
+  );
   const allChecked =
-    visibleResults.length > 0 && visibleResults.every((c) => isChecked(c));
+    selectableResults.length > 0 &&
+    selectableResults.every((c) => isChecked(c));
 
   const toggleCheck = (col: MatchedColumn) => {
     const key = colKey(col);
@@ -129,7 +142,7 @@ function ColumnSearchPanel({
   };
 
   const toggleSelectAll = () => {
-    setCheckedCols(allChecked ? [] : [...visibleResults]);
+    setCheckedCols(allChecked ? [] : [...selectableResults]);
   };
 
   const handleRegister = () => {
@@ -229,11 +242,13 @@ function ColumnSearchPanel({
             {visibleResults.map((col, i) => (
               <button
                 key={i}
-                onClick={() => toggleCheck(col)}
+                onClick={() => hasAccess(col.catalog_name) && toggleCheck(col)}
                 className={`w-full text-left px-2.5 py-2.5 rounded-lg border transition-colors ${
-                  isChecked(col)
-                    ? "bg-teal-50 border-teal-300"
-                    : "border-gray-100 hover:border-teal-200 hover:bg-teal-50/50"
+                  !hasAccess(col.catalog_name)
+                    ? "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
+                    : isChecked(col)
+                      ? "bg-teal-50 border-teal-300"
+                      : "border-gray-100 hover:border-teal-200 hover:bg-teal-50/50"
                 }`}
               >
                 <div className="flex items-start gap-2">
