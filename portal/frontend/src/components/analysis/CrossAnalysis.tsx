@@ -893,6 +893,13 @@ function StatisticsPanel({
     );
   };
 
+  // 車両選択時に自動実行
+  useEffect(() => {
+    if (!selectedVehicleId || selectedColumns.length === 0) return;
+    handleRun();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVehicleId]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
