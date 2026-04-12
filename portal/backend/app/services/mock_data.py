@@ -199,6 +199,15 @@ def mock_search_results(query: str) -> dict:
             "tags": ["speed"],
             "score": 0.65,
         },
+        {
+            "catalog_name": "ev_battery_data",
+            "schema_name": "sensors",
+            "table_name": "battery",
+            "column_name": "soc_percent",
+            "description": "バッテリー残量 (%)",
+            "tags": ["battery"],
+            "score": 0.58,
+        },
     ]
     rows = []
     for i in range(10):

@@ -17,6 +17,7 @@ import { useAnalysisStore } from "@/stores";
 import { useUIStore } from "@/stores";
 import {
   useCrossSearch,
+  useCatalogs,
   useVehicles,
   useVehicleStatus,
   useVehicleTimeseries,
@@ -29,6 +30,7 @@ import {
   EmptyState,
   PageHeader,
 } from "@/components/common/ui";
+import { MouAgreementModal } from "@/components/catalog/MouAgreementModal";
 import type { Region, MatchedColumn, StatResult } from "@/types";
 
 const REGION_OPTIONS: { value: Region; label: string }[] = [
@@ -79,16 +81,22 @@ function ColumnSearchPanel({
   onUnregister,
   onClearAll,
   onAnalyze,
+  onRequestAccess,
 }: {
   registeredColumns: MatchedColumn[];
   onRegister: (cols: MatchedColumn[]) => void;
   onUnregister: (col: MatchedColumn) => void;
   onClearAll: () => void;
   onAnalyze: () => void;
+  onRequestAccess: (catalogName: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [checkedCols, setCheckedCols] = useState<MatchedColumn[]>([]);
   const search = useCrossSearch();
+  const { data: catalogsData } = useCatalogs();
+
+  const getCatalogStatus = (catalogName: string) =>
+    catalogsData?.items.find((c) => c.catalog_name === catalogName);
 
   // Reset checked state when search results change
   useEffect(() => {
@@ -236,6 +244,40 @@ function ColumnSearchPanel({
                         ))}
                       </div>
                     )}
+                    {(() => {
+                      const catInfo = getCatalogStatus(col.catalog_name);
+                      const hasAccess =
+                        catInfo &&
+                        ["owner", "editor", "viewer"].includes(catInfo.my_role);
+                      const isPending =
+                        catInfo?.my_request_status === "PENDING";
+                      const needsApply = catInfo && !hasAccess && !isPending;
+                      return (
+                        <>
+                          {isPending && (
+                            <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                              審査中
+                            </span>
+                          )}
+                          {needsApply && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-full">
+                                未申請
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRequestAccess(col.catalog_name);
+                                }}
+                                className="text-[10px] px-1.5 py-0.5 bg-teal-50 text-teal-600 border border-teal-200 rounded-full hover:bg-teal-100 transition-colors"
+                              >
+                                申請 →
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </button>
@@ -866,6 +908,7 @@ function StatisticsPanel({ selectedColumns }: { selectedColumns: MatchedColumn[]
 export function CrossAnalysis() {
   const [registeredColumns, setRegisteredColumns] = useState<MatchedColumn[]>([]);
   const [analyzed, setAnalyzed] = useState(false);
+  const [applyTarget, setApplyTarget] = useState<string | null>(null);
 
   const handleRegister = (cols: MatchedColumn[]) => {
     setRegisteredColumns((prev) => {
@@ -899,7 +942,15 @@ export function CrossAnalysis() {
         onUnregister={handleUnregister}
         onClearAll={handleClearAll}
         onAnalyze={handleAnalyze}
+        onRequestAccess={setApplyTarget}
       />
+      {applyTarget && (
+        <MouAgreementModal
+          catalogName={applyTarget}
+          onClose={() => setApplyTarget(null)}
+          onSuccess={() => setApplyTarget(null)}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
         <PageHeader title="横断分析" />
