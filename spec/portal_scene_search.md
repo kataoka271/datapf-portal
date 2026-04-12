@@ -160,6 +160,7 @@
 
 - **時間範囲**: シーン検索結果の `recorded_at` の最小値〜最大値を自動設定（前後 30 分マージン付き）
 - **車両フィルタ**: `selectedScene.vehicle_id` を自動適用。バッジ `[選択中: VH-xxxx ×]` を表示。`×` を押すと全車両対象に戻る（統計は自動再実行しない）
+- **`region` パラメータ**: `POST /analysis/statistics` に必要だが、シーンサーチ画面ではリージョン選択を行わないため `null`（全リージョン対象）を渡す。これにより `StatisticsRequest.region` は `Optional[str]` に変更が必要（後述 Section 11）
 - **自動実行条件**: カラムが 1 件以上登録されており、かつ `selectedScene` が変化した場合に自動実行
 - **手動実行**: [分析実行] ボタンでも任意に実行可能
 
@@ -339,7 +340,7 @@
 | `GET /analysis/vehicles/{id}/status` | 選択シーン時刻のステータス取得 | 変更なし |
 | `POST /analysis/vehicles/{id}/timeseries` | 登録カラムの時系列チャート | 変更なし |
 | `GET /analysis/vehicles/{id}/video` | 車両動画 presigned URL | 変更なし |
-| `POST /analysis/statistics` | 統計分析 | **`vehicle_id` フィールドは横断分析仕様で追加済み** |
+| `POST /analysis/statistics` | 統計分析 | **`vehicle_id` は横断分析仕様で追加済み。`region` を `Optional[str]` に変更（`null` = 全リージョン）** |
 | `POST /catalogs/{name}/access-requests` | MOU 申請モーダル | 変更なし |
 
 ---
@@ -916,10 +917,24 @@ ffmpeg -ss {offset - window} -i input.mp4 -t {window * 2} -c copy clip.mp4
 
 ## 10. フロントエンド実装仕様
 
+### 前提: `ColumnSearchPanel` の抽出（リファクタリング）
+
+現在 `ColumnSearchPanel` は `CrossAnalysis.tsx` の内部関数として定義されており、`SceneSearch.tsx` から import できない。
+実装前に以下のリファクタリングが必要：
+
+```
+CrossAnalysis.tsx 内の function ColumnSearchPanel({ ... }) を
+src/components/analysis/ColumnSearchPanel.tsx として分離・export する。
+CrossAnalysis.tsx は import して再利用する形に変更。
+```
+
+これにより `SceneSearch.tsx` も同じ `ColumnSearchPanel` を import できる。
+
 ### 新規ファイル
 
 | ファイル | 役割 |
 |---|---|
+| `frontend/src/components/analysis/ColumnSearchPanel.tsx` | **新規（CrossAnalysis.tsx から抽出）** カラム検索・登録パネル |
 | `frontend/src/components/analysis/SceneSearch.tsx` | ページコンポーネント全体 |
 | `frontend/src/components/analysis/SceneCard.tsx` | サムネイルカード（ホバー動画再生ロジック含む） |
 
@@ -927,7 +942,8 @@ ffmpeg -ss {offset - window} -i input.mp4 -t {window * 2} -c copy clip.mp4
 
 | ファイル | 変更内容 |
 |---|---|
-| `frontend/src/routeTree.ts` | `/analysis/scene-search` ルート追加 |
+| `frontend/src/components/analysis/CrossAnalysis.tsx` | `ColumnSearchPanel` を外部 import に変更 |
+| `frontend/src/routeTree.tsx` | `/analysis/scene-search` ルート追加（拡張子は `.tsx`） |
 | `frontend/src/components/common/AppShell.tsx` | NAV に「シーンサーチ」追加（データ分析グループ） |
 | `frontend/src/api/index.ts` | `analysisApi.sceneSearch()` / `analysisApi.getSceneClip()` 追加 |
 | `frontend/src/hooks/index.ts` | `useSceneSearch()` / `useSceneClip()` カスタムフック追加 |
@@ -1168,9 +1184,17 @@ CLIP / sentence-transformers のモデルロードはコールドスタートで
 # services/embedding.py（ポータル Lambda 側: Embedding Lambda の呼び出しクライアント）
 
 import boto3, json
+from app.config import get_settings
 
 def embed_query(query_text: str) -> list[float]:
-    """Embedding Lambda を同期 invoke してベクトルを取得する"""
+    """Embedding Lambda を同期 invoke してベクトルを取得する。
+    DEV_MODE=true の場合は Lambda を呼ばず固定ゼロベクトルを返す。"""
+    settings = get_settings()
+
+    # dev モード: 固定ゼロベクトルを返す（Embedding Lambda 不要）
+    if settings.dev_mode:
+        return [0.0] * settings.frame_embed_dim
+
     client = boto3.client("lambda")
     response = client.invoke(
         FunctionName=settings.embedding_lambda_name,
@@ -1182,6 +1206,40 @@ def embed_query(query_text: str) -> list[float]:
         }),
     )
     return json.loads(response["Payload"].read())["vector"]
+```
+
+### `_offset_to_iso()` ヘルパー（routers.py に追加）
+
+```python
+from datetime import datetime, timezone, timedelta
+
+def _offset_to_iso(recorded_at: str, delta_sec: float) -> str:
+    """recorded_at (ISO 8601 UTC) に delta_sec 秒を加算して ISO 文字列で返す"""
+    dt = datetime.fromisoformat(recorded_at.replace("Z", "+00:00"))
+    return (dt + timedelta(seconds=delta_sec)).strftime("%Y-%m-%dT%H:%M:%SZ")
+```
+
+### `StatisticsRequest` の変更（models.py）
+
+`region` を `Optional[str]` に変更する。`None` の場合はバックエンドの WHERE 句から `region` フィルタを除外する（全リージョン対象）。
+
+```python
+class StatisticsRequest(BaseModel):
+    region: Optional[str] = None   # None = 全リージョン（シーンサーチから呼ぶ場合）
+    time_from: str
+    time_to: str
+    columns: list[str]
+    vehicle_id: Optional[str] = None
+```
+
+`routers.py` の `get_statistics` 内の SQL も条件分岐に変更：
+
+```python
+where_clauses = ["recorded_at BETWEEN ? AND ?"]
+params = [body.time_from, body.time_to]
+if body.region:
+    where_clauses.insert(0, "region = ?")
+    params.insert(0, body.region)
 ```
 
 ### 新規ルーターエンドポイント（routers.py に追加）
@@ -1345,22 +1403,24 @@ datapf-portal/
 
 | ファイル | 変更種別 |
 |---|---|
-| `app/models.py` | `SceneSearchRequest` 追加 |
-| `app/routers.py` | `scene_search` / `get_scene_clip` エンドポイント追加 |
-| `app/config.py` | `VECTOR_SEARCH_BACKEND` / `CLIP_MODE` / `EMBEDDING_LAMBDA_NAME` など追加 |
+| `app/models.py` | `SceneSearchRequest` 追加、`StatisticsRequest.region` を `Optional[str]` に変更 |
+| `app/routers.py` | `scene_search` / `get_scene_clip` 追加、`get_statistics` の region 条件を Optional 対応、`_offset_to_iso()` ヘルパー追加 |
+| `app/config.py` | `VECTOR_SEARCH_BACKEND` / `CLIP_MODE` / `EMBEDDING_LAMBDA_NAME` / `FRAME_EMBED_DIM` など追加 |
 | `app/services/mock_data.py` | `mock_scene_search` / `mock_scene_clip` 追加 |
 | `app/services/vector_search.py` | **新規**（`VectorSearchBackend` 抽象クラス + `S3VectorsBackend` + `QdrantBackend` + `PgVectorBackend` + `DatabricksVectorBackend`） |
-| `app/services/embedding.py` | **新規**（`embed_query()` — Embedding Lambda の boto3 呼び出しクライアント） |
-| `requirements.txt` | `qdrant-client` / `psycopg2-binary` / `pgvector` 追加（boto3 は既存） |
+| `app/services/embedding.py` | **新規**（`embed_query()` — dev モックあり、本番は Embedding Lambda の boto3 呼び出し） |
+| `pyproject.toml` | `qdrant-client` / `psycopg2-binary` / `pgvector` / `databricks-vectorsearch` 追加、`boto3` を `>=1.35` に更新（S3 Vectors 対応） |
 | `tests/test_api.py` | シーンサーチ関連テストケース追加 |
 
 ### portal/frontend/（React SPA）
 
 | ファイル | 変更種別 |
 |---|---|
+| `src/components/analysis/ColumnSearchPanel.tsx` | **新規（CrossAnalysis.tsx から抽出）** |
+| `src/components/analysis/CrossAnalysis.tsx` | `ColumnSearchPanel` を外部 import に変更 |
 | `src/components/analysis/SceneSearch.tsx` | **新規** |
 | `src/components/analysis/SceneCard.tsx` | **新規** |
-| `src/routeTree.ts` | `/analysis/scene-search` ルート追加 |
+| `src/routeTree.tsx` | `/analysis/scene-search` ルート追加 |
 | `src/components/common/AppShell.tsx` | NAV 項目追加（データ分析グループ） |
 | `src/api/index.ts` | `sceneSearch` / `getSceneClip` 追加 |
 | `src/hooks/index.ts` | `useSceneSearch` / `useSceneClip` 追加 |
