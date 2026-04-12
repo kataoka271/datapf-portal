@@ -86,6 +86,7 @@ export interface MatchedColumn {
   description: string;
   tags: string[];
   score: number;
+  owner_user_id?: string;
 }
 
 export interface SearchResult {

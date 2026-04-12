@@ -124,6 +124,7 @@ class MatchedColumn(BaseModel):
     description: str = ""
     tags: list[str] = []
     score: float
+    owner_user_id: str = ""
 
 
 class SearchRequest(BaseModel):

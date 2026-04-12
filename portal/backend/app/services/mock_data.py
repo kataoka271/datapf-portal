@@ -171,6 +171,7 @@ def mock_search_results(query: str) -> dict:
             "description": "車両速度 (km/h)",
             "tags": ["speed"],
             "score": 0.94,
+            "owner_user_id": "dev-user-001",
         },
         {
             "catalog_name": "vehicle_timeseries",
@@ -180,6 +181,7 @@ def mock_search_results(query: str) -> dict:
             "description": "前後加速度 (G)",
             "tags": ["accel"],
             "score": 0.87,
+            "owner_user_id": "dev-user-001",
         },
         {
             "catalog_name": "vehicle_timeseries",
@@ -189,6 +191,7 @@ def mock_search_results(query: str) -> dict:
             "description": "横加速度 (G)",
             "tags": ["accel"],
             "score": 0.71,
+            "owner_user_id": "dev-user-001",
         },
         {
             "catalog_name": "fault_diagnostics",
@@ -198,6 +201,7 @@ def mock_search_results(query: str) -> dict:
             "description": "左前輪速度 (rpm)",
             "tags": ["speed"],
             "score": 0.65,
+            "owner_user_id": "suzuki@co.jp",
         },
         {
             "catalog_name": "ev_battery_data",
@@ -207,6 +211,7 @@ def mock_search_results(query: str) -> dict:
             "description": "バッテリー残量 (%)",
             "tags": ["battery"],
             "score": 0.58,
+            "owner_user_id": "ito@co.jp",
         },
     ]
     rows = []

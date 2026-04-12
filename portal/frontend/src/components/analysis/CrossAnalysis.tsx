@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "@tanstack/react-router";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
@@ -292,6 +293,21 @@ function ColumnSearchPanel({
                         ))}
                       </div>
                     )}
+                    <div className="flex items-center justify-between mt-1">
+                      {col.owner_user_id && (
+                        <span className="text-[10px] text-gray-400 truncate">
+                          {col.owner_user_id}
+                        </span>
+                      )}
+                      <Link
+                        to="/catalogs/$catalogName"
+                        params={{ catalogName: col.catalog_name }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[10px] text-teal-600 hover:underline flex-shrink-0 ml-auto"
+                      >
+                        詳細 →
+                      </Link>
+                    </div>
                     {(() => {
                       const catInfo = getCatalogStatus(col.catalog_name);
                       const hasAccess =
