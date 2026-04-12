@@ -611,7 +611,8 @@ function TimeseriesChart({
   ).toISOString();
   const timeTo = new Date(atTime).toISOString();
   const columnKeys = columns.map(
-    (c) => `${c.catalog_name}.${c.schema_name}.${c.table_name}.${c.column_name}`,
+    (c) =>
+      `${c.catalog_name}.${c.schema_name}.${c.table_name}.${c.column_name}`,
   );
   const { data, isLoading } = useVehicleTimeseries(
     selectedVehicleId,
@@ -672,7 +673,11 @@ function TimeseriesChart({
 }
 
 // ── Vehicle analysis panel ────────────────────────────────────────────────────
-function VehiclePanel({ selectedColumns }: { selectedColumns: MatchedColumn[] }) {
+function VehiclePanel({
+  selectedColumns,
+}: {
+  selectedColumns: MatchedColumn[];
+}) {
   const {
     region,
     atTime,
@@ -681,7 +686,10 @@ function VehiclePanel({ selectedColumns }: { selectedColumns: MatchedColumn[] })
     setAtTime,
     setSelectedVehicleId,
   } = useAnalysisStore();
-  const { data: vehiclesData, isLoading } = useVehicles(region, atTime + ":00Z");
+  const { data: vehiclesData, isLoading } = useVehicles(
+    region,
+    atTime + ":00Z",
+  );
 
   return (
     <div className="space-y-4">
@@ -826,8 +834,13 @@ function StatCard({ stat, color }: { stat: StatResult; color: string }) {
 }
 
 // ── Statistics panel ──────────────────────────────────────────────────────────
-function StatisticsPanel({ selectedColumns }: { selectedColumns: MatchedColumn[] }) {
-  const { region, selectedVehicleId, setSelectedVehicleId } = useAnalysisStore();
+function StatisticsPanel({
+  selectedColumns,
+}: {
+  selectedColumns: MatchedColumn[];
+}) {
+  const { region, selectedVehicleId, setSelectedVehicleId } =
+    useAnalysisStore();
   const [timeFrom, setTimeFrom] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -841,7 +854,10 @@ function StatisticsPanel({ selectedColumns }: { selectedColumns: MatchedColumn[]
 
   const handleRun = () => {
     if (selectedColumns.length === 0) {
-      addToast({ type: "error", message: "左パネルでカラムを登録してください" });
+      addToast({
+        type: "error",
+        message: "左パネルでカラムを登録してください",
+      });
       return;
     }
     stats.mutate(
@@ -939,7 +955,9 @@ function StatisticsPanel({ selectedColumns }: { selectedColumns: MatchedColumn[]
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function CrossAnalysis() {
-  const [registeredColumns, setRegisteredColumns] = useState<MatchedColumn[]>([]);
+  const [registeredColumns, setRegisteredColumns] = useState<MatchedColumn[]>(
+    [],
+  );
   const [analyzed, setAnalyzed] = useState(false);
   const [applyTarget, setApplyTarget] = useState<string | null>(null);
 
@@ -954,7 +972,9 @@ export function CrossAnalysis() {
   };
 
   const handleUnregister = (col: MatchedColumn) => {
-    setRegisteredColumns((prev) => prev.filter((c) => colKey(c) !== colKey(col)));
+    setRegisteredColumns((prev) =>
+      prev.filter((c) => colKey(c) !== colKey(col)),
+    );
     setAnalyzed(false);
   };
 

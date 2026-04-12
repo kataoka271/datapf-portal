@@ -292,107 +292,107 @@ export function AppRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
-        <div>
-          <label className={labelCls}>
-            アプリ名 <span className="text-red-500">*</span>
-          </label>
-          <input {...register("name")} className={inputCls} />
-          {errors.name && <p className={errCls}>{errors.name.message}</p>}
-        </div>
+      <div>
+        <label className={labelCls}>
+          アプリ名 <span className="text-red-500">*</span>
+        </label>
+        <input {...register("name")} className={inputCls} />
+        {errors.name && <p className={errCls}>{errors.name.message}</p>}
+      </div>
 
-        <div>
-          <label className={labelCls}>
-            説明 <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            {...register("description")}
-            rows={3}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400 resize-none"
-          />
-          {errors.description && (
-            <p className={errCls}>{errors.description.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className={labelCls}>
-            遷移先 URL <span className="text-red-500">*</span>
-          </label>
-          <input
-            {...register("redirect_url")}
-            className={inputCls}
-            placeholder="https://app.example.com"
-          />
-          {errors.redirect_url && (
-            <p className={errCls}>{errors.redirect_url.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className={labelCls}>
-            使用カタログ <span className="text-red-500">*</span>
-          </label>
-          <div className="space-y-1 max-h-36 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
-            {(catalogs?.items ?? []).map((c) => (
-              <label
-                key={c.catalog_name}
-                className="flex items-center gap-2 text-xs cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  value={c.catalog_name}
-                  {...register("used_catalog_names")}
-                  className="rounded border-gray-300 text-teal-600"
-                />
-                <span className="font-mono">{c.catalog_name}</span>
-              </label>
-            ))}
-          </div>
-          {errors.used_catalog_names && (
-            <p className={errCls}>{errors.used_catalog_names.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              {...register("use_cognito")}
-              className="rounded border-gray-300 text-teal-600"
-            />
-            Cognito 連携を使用する（自動ユーザー登録）
-          </label>
-        </div>
-
-        {useCognito && (
-          <div className="space-y-3 pl-4 border-l-2 border-teal-200">
-            <div>
-              <label className={labelCls}>Cognito User Pool ARN</label>
-              <input
-                {...register("cognito_user_pool_arn")}
-                className={inputCls}
-                placeholder="arn:aws:cognito-idp:ap-northeast-1:123456789:userpool/..."
-              />
-            </div>
-            <div>
-              <label className={labelCls}>リージョン</label>
-              <input
-                {...register("cognito_region")}
-                className={inputCls}
-                placeholder="ap-northeast-1"
-              />
-            </div>
-          </div>
+      <div>
+        <label className={labelCls}>
+          説明 <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          {...register("description")}
+          rows={3}
+          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400 resize-none"
+        />
+        {errors.description && (
+          <p className={errCls}>{errors.description.message}</p>
         )}
+      </div>
 
-        <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
-          <Button type="button" variant="secondary" onClick={onSuccess}>
-            キャンセル
-          </Button>
-          <Button type="submit" variant="primary" loading={isSubmitting}>
-            登録する
-          </Button>
+      <div>
+        <label className={labelCls}>
+          遷移先 URL <span className="text-red-500">*</span>
+        </label>
+        <input
+          {...register("redirect_url")}
+          className={inputCls}
+          placeholder="https://app.example.com"
+        />
+        {errors.redirect_url && (
+          <p className={errCls}>{errors.redirect_url.message}</p>
+        )}
+      </div>
+
+      <div>
+        <label className={labelCls}>
+          使用カタログ <span className="text-red-500">*</span>
+        </label>
+        <div className="space-y-1 max-h-36 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
+          {(catalogs?.items ?? []).map((c) => (
+            <label
+              key={c.catalog_name}
+              className="flex items-center gap-2 text-xs cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                value={c.catalog_name}
+                {...register("used_catalog_names")}
+                className="rounded border-gray-300 text-teal-600"
+              />
+              <span className="font-mono">{c.catalog_name}</span>
+            </label>
+          ))}
         </div>
+        {errors.used_catalog_names && (
+          <p className={errCls}>{errors.used_catalog_names.message}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+          <input
+            type="checkbox"
+            {...register("use_cognito")}
+            className="rounded border-gray-300 text-teal-600"
+          />
+          Cognito 連携を使用する（自動ユーザー登録）
+        </label>
+      </div>
+
+      {useCognito && (
+        <div className="space-y-3 pl-4 border-l-2 border-teal-200">
+          <div>
+            <label className={labelCls}>Cognito User Pool ARN</label>
+            <input
+              {...register("cognito_user_pool_arn")}
+              className={inputCls}
+              placeholder="arn:aws:cognito-idp:ap-northeast-1:123456789:userpool/..."
+            />
+          </div>
+          <div>
+            <label className={labelCls}>リージョン</label>
+            <input
+              {...register("cognito_region")}
+              className={inputCls}
+              placeholder="ap-northeast-1"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
+        <Button type="button" variant="secondary" onClick={onSuccess}>
+          キャンセル
+        </Button>
+        <Button type="submit" variant="primary" loading={isSubmitting}>
+          登録する
+        </Button>
+      </div>
     </form>
   );
 }
