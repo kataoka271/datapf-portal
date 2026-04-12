@@ -37,19 +37,23 @@
 │  カラム検索 (左, w-72) │                                                      │
 │                        │  ─── 車両分析 ─────────────────────────────────── │
 │  [クエリ入力  ] [検索] │  リージョン / 時刻フィルタ                          │
-│                        │  ┌──── VehicleMap (3/5) ────────┐ ┌── Status ──┐   │
-│  [すべて選択] [N件を登録]  │   OpenStreetMap + 車両点      │ │ 車両ID     │   │
-│  ☐ vehicle_speed       │  │   クリックで選択 (赤くなる)   │ │ 各メトリクス│   │
-│    ████████░░ 94%      │  └─────────────────────────────┘ └────────────┘   │
-│  ☐ accel_x             │  TimeseriesChart (登録カラムでプロット)              │
-│    ██████░░░░ 81%      │                                                      │
-│                        │  ─── 統計分析 ─────────────────────────────────── │
-│  ── 登録済みカラム(2) ──  時間範囲フィルタ  [選択中: VH-0042 ×]  [分析実行] │
-│  vehicle_speed    [×]  │  StatCard × N (ヒストグラム / 統計値タブ)           │
-│  accel_x          [×]  │                                                      │
+│  [未申請を含む]        │  ┌──── VehicleMap (3/5) ────────┐ ┌── Status ──┐   │
+│                        │  │   OpenStreetMap + 車両点      │ │ 車両ID     │   │
+│  [すべて選択] [N件を登録]  │   クリックで選択 (赤くなる)   │ │ 各メトリクス│   │
+│  ☐ vehicle_speed       │  └─────────────────────────────┘ └────────────┘   │
+│    ████████░░ 94%      │  TimeseriesChart + 動画（登録カラムでプロット）      │
+│  ─ wheel_speed_fl      │                                                      │
+│    ████░░░░░░ 65%      │  ─── 統計分析 ─────────────────────────────────── │
+│    審査中              │  時間範囲フィルタ  [選択中: VH-0042 ×]              │
+│  ─ soc_percent         │  StatCard × N (ヒストグラム / 統計値タブ)           │
+│    ████░░░░░░ 58%      │  ※ 車両選択時に自動実行                             │
+│    未申請  [申請→]     │                                                      │
+│                        │                                                      │
+│  ── 登録済みカラム(1) ──                                                     │
+│  vehicle_speed    [×]  │                                                      │
 │  [すべて解除]          │                                                      │
 │                        │                                                      │
-│  [2件で分析]           │                                                      │
+│  [1件で分析]           │                                                      │
 └────────────────────────┴─────────────────────────────────────────────────────┘
 ```
 
@@ -61,8 +65,13 @@
 1. 検索クエリ入力 → [検索] ボタン (または Enter)
       ↓ POST /catalogs/search
 2. 検索結果一覧表示
-   ├─ 各カラムにチェックボックス
-   ├─ [すべて選択 / すべて解除] ボタン (検索結果を一括チェック)
+   ├─ 各カラムにチェックボックス（アクセス権ありのみ選択可）
+   ├─ アクセス権なし（未申請・審査中）はグレーアウト + バッジ表示
+   │   ├─ 審査中: amber バッジのみ
+   │   └─ 未申請: gray バッジ + [申請→] ボタン → MouAgreementModal
+   ├─ [未申請を含む] トグル → OFF で未申請・審査中カラムを非表示
+   ├─ [すべて選択 / すべて解除] ボタン（アクセス可能なカラムのみ一括チェック）
+   ├─ 登録済みカラムは検索結果から除外
    └─ [N件を登録] ボタン → 登録済みカラム一覧に追加・checkedCols クリア
 
 3. 登録済みカラム一覧
@@ -77,7 +86,9 @@
 | 状態 | 保持場所 | 役割 |
 |---|---|---|
 | `checkedCols` | `ColumnSearchPanel` ローカル | 現在の検索結果でチェック中（一時的） |
+| `showUnapplied` | `ColumnSearchPanel` ローカル | 未申請カラムの表示/非表示（デフォルト: 含む） |
 | `registeredColumns` | `CrossAnalysis` | 分析に使う登録済みカラム（永続） |
+| `applyTarget` | `CrossAnalysis` | MouAgreementModal に渡すカタログ名 |
 
 - 新規検索を実行すると `checkedCols` はリセット（登録済みカラムは維持）
 - 「登録」でチェック済みカラムを重複なく登録リストに追加し、チェックをクリア
@@ -93,15 +104,17 @@
     │   region, atTime → POST /analysis/vehicles → VehicleMap
     │   マップクリック → selectedVehicleId (useAnalysisStore)
     │   selectedVehicleId → GET /analysis/vehicles/{id}/status
-    │   selectedVehicleId + registeredColumns.column_full_name
+    │                     → GET /analysis/vehicles/{id}/video（has_video 時）
+    │   selectedVehicleId + registeredColumns
     │       → POST /analysis/vehicles/{id}/timeseries
     │
     └─ [統計分析パネル]
         registeredColumns + region + time_from + time_to + selectedVehicleId
             → POST /analysis/statistics → StatCard × N
+        ※ selectedVehicleId 変化時に自動実行（カラム登録済みの場合のみ）
 ```
 
-**連携ポイント**: `selectedVehicleId` (Zustand `useAnalysisStore`) が車両分析・統計分析の両パネルで共有される。マップで車両を選択すると、統計パネルの「選択中: VH-xxxx」バッジが自動更新される。バッジの [×] を押すと全車両対象に戻る。
+**連携ポイント**: `selectedVehicleId` (Zustand `useAnalysisStore`) が車両分析・統計分析の両パネルで共有される。マップで車両を選択すると、統計パネルの「選択中: VH-xxxx」バッジが自動更新され、統計分析が自動実行される。バッジの [×] を押すと全車両対象に戻る（自動実行しない）。
 
 ---
 
@@ -109,11 +122,14 @@
 
 | エンドポイント | 使用パネル | 変更 |
 |---|---|---|
+| `GET /catalogs` | カラム検索 | アクセス状態バッジ用（変更なし） |
 | `POST /catalogs/search` | カラム検索 | 変更なし |
 | `POST /analysis/vehicles` | 車両分析 | 変更なし |
 | `GET /analysis/vehicles/{id}/status` | 車両分析 | 変更なし |
 | `POST /analysis/vehicles/{id}/timeseries` | 車両分析 | 変更なし |
+| `GET /analysis/vehicles/{id}/video` | 車両分析 | 変更なし（has_video 時に自動取得） |
 | `POST /analysis/statistics` | 統計分析 | **`vehicle_id` フィールド追加** |
+| `POST /catalogs/{name}/access-requests` | 申請モーダル | 変更なし（MouAgreementModal 再利用） |
 
 ### `POST /analysis/statistics` の変更点
 
@@ -154,5 +170,6 @@
 | `frontend/src/components/common/AppShell.tsx` | NAV 項目追加 |
 | `frontend/src/api/index.ts` | `statistics` 引数に `vehicle_id?` 追加 |
 | `backend/app/models.py` | `StatisticsRequest` に `vehicle_id` フィールド追加 |
-| `backend/app/services/mock_data.py` | `mock_statistics` に `vehicle_id` 引数追加 |
+| `backend/app/services/mock_data.py` | `mock_statistics` に `vehicle_id` 引数追加、`ev_battery_data` カラム追加、`fault_diagnostics` の `my_role` を `none` に修正 |
 | `backend/app/routers.py` | `vehicle_id` を `mock_statistics` に渡す |
+| `backend/Dockerfile` | `requirements.txt` → `pyproject.toml` + `uv` に変更 |
