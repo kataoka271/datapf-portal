@@ -603,7 +603,7 @@ def update_app(app_id: str, body: UpdateAppRequest, user: CurrentUser = Depends(
             params.extend([app_id, user.user_id])
             db_svc.execute_sql(
                 f"""UPDATE {settings.portal_catalog}.apps.app_registry
-                    SET {', '.join(updates)}
+                    SET {", ".join(updates)}
                     WHERE app_id = ? AND owner_user_id = ?""",
                 tuple(params),
             )
@@ -761,15 +761,14 @@ def get_vehicle_timeseries(
         )
         series = []
         for col in select_parts:
-            series.append({
-                "column_full_name": col,
-                "display_name": col,
-                "unit": None,
-                "data": [
-                    {"timestamp": str(r.get("recorded_at", "")), "value": r.get(col, 0)}
-                    for r in rows
-                ],
-            })
+            series.append(
+                {
+                    "column_full_name": col,
+                    "display_name": col,
+                    "unit": None,
+                    "data": [{"timestamp": str(r.get("recorded_at", "")), "value": r.get(col, 0)} for r in rows],
+                }
+            )
         return {"vehicle_id": vehicle_id, "series": series}
 
     series = mock.mock_timeseries(vehicle_id, body.columns)
@@ -837,20 +836,22 @@ def get_statistics(body: StatisticsRequest, user: CurrentUser = Depends(get_curr
                 }
                 for h in hist_rows
             ]
-            stats.append({
-                "column_full_name": col,
-                "display_name": col_name,
-                "count": int(r.get("count") or 0),
-                "null_count": int(r.get("null_count") or 0),
-                "mean": float(r.get("mean") or 0),
-                "stddev": float(r.get("stddev") or 0),
-                "min": mn,
-                "p25": float(r.get("p25") or 0),
-                "p50": float(r.get("p50") or 0),
-                "p75": float(r.get("p75") or 0),
-                "max": mx,
-                "histogram": histogram,
-            })
+            stats.append(
+                {
+                    "column_full_name": col,
+                    "display_name": col_name,
+                    "count": int(r.get("count") or 0),
+                    "null_count": int(r.get("null_count") or 0),
+                    "mean": float(r.get("mean") or 0),
+                    "stddev": float(r.get("stddev") or 0),
+                    "min": mn,
+                    "p25": float(r.get("p25") or 0),
+                    "p50": float(r.get("p50") or 0),
+                    "p75": float(r.get("p75") or 0),
+                    "max": mx,
+                    "histogram": histogram,
+                }
+            )
         return {"stats": stats}
     return {"stats": mock.mock_statistics(body.columns, body.vehicle_id)}
 

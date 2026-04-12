@@ -55,7 +55,7 @@ def execute_sql(query: str, params: tuple = ()) -> list[dict[str, Any]]:
     try:
         with conn.cursor() as cur:
             cur.execute(query, params)
-            cols = [d[0] for d in cur.description]
+            cols = [d[0] for d in cur.description or [""]]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
     finally:
         conn.close()
@@ -170,10 +170,12 @@ def create_unity_catalog(catalog_name: str, owner_user_id: str) -> None:
         w.grants.update(
             full_name=catalog_name,
             securable_type=SecurableType.CATALOG,
-            changes=[PermissionsChange(
-                add=[Privilege.ALL_PRIVILEGES],
-                principal=owner_group_name,
-            )],
+            changes=[
+                PermissionsChange(
+                    add=[Privilege.ALL_PRIVILEGES],
+                    principal=owner_group_name,
+                )
+            ],
         )
     except Exception:
         pass
@@ -206,13 +208,15 @@ def get_catalog_members(catalog_name: str) -> list[dict[str, Any]]:
                         continue
                     user_info = w.users.get(m.value)
                     email = user_info.emails[0].value if user_info.emails else ""
-                    members.append({
-                        "user_id": m.value,
-                        "email": email,
-                        "display_name": user_info.display_name or email,
-                        "role": role,
-                        "approved_at": datetime.now(timezone.utc).isoformat(),
-                    })
+                    members.append(
+                        {
+                            "user_id": m.value,
+                            "email": email,
+                            "display_name": user_info.display_name or email,
+                            "role": role,
+                            "approved_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    )
                 except Exception:
                     pass
         return members
@@ -257,7 +261,7 @@ def get_user_catalog_roles(email: str) -> list[dict[str, str]]:
             return []
         user_obj = w.users.get(users[0].id, attributes="groups")
         roles: list[dict[str, str]] = []
-        for grp in (user_obj.groups or []):
+        for grp in user_obj.groups or []:
             name = grp.display
             if not name or not name.startswith("catalog-"):
                 continue

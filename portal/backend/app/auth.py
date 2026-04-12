@@ -65,9 +65,7 @@ async def get_current_user(
             audience=settings.oidc_audience,
         )
         email = payload.get("email", "")
-        catalog_roles = [
-            CatalogRole(**r) for r in db_svc.get_user_catalog_roles(email)
-        ]
+        catalog_roles = [CatalogRole(**r) for r in db_svc.get_user_catalog_roles(email)]
         return CurrentUser(
             user_id=payload.get("sub", ""),
             email=email,
