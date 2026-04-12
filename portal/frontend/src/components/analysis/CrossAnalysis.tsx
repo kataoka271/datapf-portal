@@ -92,6 +92,7 @@ function ColumnSearchPanel({
 }) {
   const [query, setQuery] = useState("");
   const [checkedCols, setCheckedCols] = useState<MatchedColumn[]>([]);
+  const [showUnapplied, setShowUnapplied] = useState(true);
   const search = useCrossSearch();
   const { data: catalogsData } = useCatalogs();
 
@@ -104,10 +105,19 @@ function ColumnSearchPanel({
   }, [search.data]);
 
   const results = search.data?.matched_columns ?? [];
+
+  const visibleResults = showUnapplied
+    ? results
+    : results.filter((col) => {
+        const catInfo = getCatalogStatus(col.catalog_name);
+        if (!catInfo) return true;
+        return ["owner", "editor", "viewer"].includes(catInfo.my_role);
+      });
+
   const isChecked = (col: MatchedColumn) =>
     checkedCols.some((c) => colKey(c) === colKey(col));
   const allChecked =
-    results.length > 0 && results.every((c) => isChecked(c));
+    visibleResults.length > 0 && visibleResults.every((c) => isChecked(c));
 
   const toggleCheck = (col: MatchedColumn) => {
     const key = colKey(col);
@@ -119,7 +129,7 @@ function ColumnSearchPanel({
   };
 
   const toggleSelectAll = () => {
-    setCheckedCols(allChecked ? [] : [...results]);
+    setCheckedCols(allChecked ? [] : [...visibleResults]);
   };
 
   const handleRegister = () => {
@@ -155,6 +165,29 @@ function ColumnSearchPanel({
             検索
           </Button>
         </div>
+        <button
+          onClick={() => setShowUnapplied((v) => !v)}
+          className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-md border transition-colors ${
+            showUnapplied
+              ? "bg-gray-100 text-gray-600 border-gray-200"
+              : "bg-teal-50 text-teal-700 border-teal-200"
+          }`}
+        >
+          <svg
+            className="w-3 h-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 4a1 1 0 011-1h16a1 1 0 010 2H4a1 1 0 01-1-1zm3 4a1 1 0 011-1h10a1 1 0 010 2H7a1 1 0 01-1-1zm3 4a1 1 0 011-1h4a1 1 0 010 2h-4a1 1 0 01-1-1z"
+            />
+          </svg>
+          {showUnapplied ? "未申請を含む" : "未申請を除く"}
+        </button>
       </div>
 
       {/* Scrollable area: results + registry */}
@@ -170,7 +203,7 @@ function ColumnSearchPanel({
             検索キーワードを入力してください
           </p>
         )}
-        {results.length > 0 && (
+        {visibleResults.length > 0 && (
           <div className="p-3 space-y-1">
             {/* Select-all + register bar */}
             <div className="flex items-center justify-between mb-2">
@@ -193,7 +226,7 @@ function ColumnSearchPanel({
               </Button>
             </div>
 
-            {results.map((col, i) => (
+            {visibleResults.map((col, i) => (
               <button
                 key={i}
                 onClick={() => toggleCheck(col)}
