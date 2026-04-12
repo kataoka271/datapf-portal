@@ -32,7 +32,7 @@ def mock_catalogs(user_id: str) -> list[dict]:
             "display_name": "故障診断データ",
             "description": "DTC コード・センサー値・修理履歴を含む故障診断データ。要承認。",
             "owner_user_id": "suzuki@co.jp",
-            "my_role": "viewer",
+            "my_role": "none",
             "my_request_status": "PENDING",
             "requires_approval": True,
             "status": "ACTIVE",
