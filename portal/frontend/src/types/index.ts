@@ -119,6 +119,7 @@ export type NotificationType =
   | "ACCESS_REQUEST"
   | "APPROVAL"
   | "REJECTION"
+  | "REVOCATION"
   | "QUALITY_ALERT"
   | "SYSTEM_MESSAGE";
 

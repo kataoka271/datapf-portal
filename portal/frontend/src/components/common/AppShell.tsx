@@ -37,6 +37,11 @@ const NAV = [
     group: "データ分析",
     items: [
       {
+        label: "横断分析",
+        to: "/analysis/cross",
+        icon: "M4 6h16M4 12h16M4 18h7m4-6l3 3-3 3",
+      },
+      {
         label: "車両分析",
         to: "/analysis/vehicles",
         icon: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4",

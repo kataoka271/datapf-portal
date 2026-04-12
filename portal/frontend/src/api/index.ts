@@ -254,6 +254,7 @@ export const analysisApi = {
     time_from: string;
     time_to: string;
     columns: string[];
+    vehicle_id?: string;
   }) => post<{ stats: StatResult[] }>("/analysis/statistics", body),
 };
 

@@ -852,7 +852,7 @@ def get_statistics(body: StatisticsRequest, user: CurrentUser = Depends(get_curr
                 "histogram": histogram,
             })
         return {"stats": stats}
-    return {"stats": mock.mock_statistics(body.columns)}
+    return {"stats": mock.mock_statistics(body.columns, body.vehicle_id)}
 
 
 # ── Alerts ────────────────────────────────────────────────────────────────────

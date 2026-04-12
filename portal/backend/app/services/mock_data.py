@@ -308,7 +308,7 @@ def mock_timeseries(vehicle_id: str, columns: list[str]) -> list[dict]:
     return series
 
 
-def mock_statistics(columns: list[str]) -> list[dict]:
+def mock_statistics(columns: list[str], vehicle_id: str | None = None) -> list[dict]:
     stats = []
     for col in columns:
         col_name = col.split(".")[-1]

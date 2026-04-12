@@ -14,6 +14,7 @@ import { MouEditor } from "./components/catalog/MouEditor";
 import { AppMarketplace } from "./components/apps/AppMarketplace";
 import { VehicleAnalysis } from "./components/analysis/VehicleAnalysis";
 import { StatisticsAnalysis } from "./components/analysis/StatisticsAnalysis";
+import { CrossAnalysis } from "./components/analysis/CrossAnalysis";
 import {
   NotificationList,
   AlertList,
@@ -144,6 +145,12 @@ const appsRoute = createRoute({
 });
 
 // ── Analysis routes ───────────────────────────────────────────────────────────
+const crossAnalysisRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/analysis/cross",
+  component: CrossAnalysis,
+});
+
 const vehiclesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/analysis/vehicles",
@@ -178,6 +185,7 @@ export const routeTree = rootRoute.addChildren([
   catalogRequestsRoute,
   mouEditorRoute,
   appsRoute,
+  crossAnalysisRoute,
   vehiclesRoute,
   statisticsRoute,
   notificationsRoute,

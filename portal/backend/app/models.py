@@ -265,6 +265,7 @@ class StatisticsRequest(BaseModel):
     time_from: str
     time_to: str
     columns: list[str]
+    vehicle_id: Optional[str] = None
 
 
 class HistogramBin(BaseModel):

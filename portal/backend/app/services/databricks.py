@@ -108,15 +108,19 @@ def _modify_group_member(group_name: str, user_id: str, add: bool) -> None:
             client_id=settings.databricks_sp_client_id,
             client_secret=settings.databricks_sp_client_secret,
         )
+        from databricks.sdk.service.iam import Patch, PatchOp, PatchSchema
+
         groups = list(w.groups.list(filter=f'displayName eq "{group_name}"'))
         if not groups:
             return
         group = groups[0]
+        if not group.id:
+            return
         if add:
             w.groups.patch(
                 group.id,
-                operations=[{"op": "add", "path": "members", "value": [{"value": user_id}]}],
-                schemas=["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                operations=[Patch(op=PatchOp.ADD, path="members", value=[{"value": user_id}])],
+                schemas=[PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP],
             )
         else:
             members = group.members or []
@@ -124,8 +128,8 @@ def _modify_group_member(group_name: str, user_id: str, add: bool) -> None:
                 if m.value == user_id:
                     w.groups.patch(
                         group.id,
-                        operations=[{"op": "remove", "path": f'members[value eq "{user_id}"]'}],
-                        schemas=["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                        operations=[Patch(op=PatchOp.REMOVE, path=f'members[value eq "{user_id}"]')],
+                        schemas=[PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP],
                     )
                     break
     except Exception:
@@ -153,11 +157,13 @@ def create_unity_catalog(catalog_name: str, owner_user_id: str) -> None:
         if not groups:
             w.groups.create(display_name=owner_group_name)
             groups = list(w.groups.list(filter=f'displayName eq "{owner_group_name}"'))
-        if groups:
+        if groups and groups[0].id:
+            from databricks.sdk.service.iam import Patch, PatchOp, PatchSchema
+
             w.groups.patch(
                 groups[0].id,
-                operations=[{"op": "add", "path": "members", "value": [{"value": owner_user_id}]}],
-                schemas=["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                operations=[Patch(op=PatchOp.ADD, path="members", value=[{"value": owner_user_id}])],
+                schemas=[PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP],
             )
 
         # Grant ALL PRIVILEGES on the catalog to the owner group
@@ -196,6 +202,8 @@ def get_catalog_members(catalog_name: str) -> list[dict[str, Any]]:
                 continue
             for m in groups[0].members:
                 try:
+                    if not m.value:
+                        continue
                     user_info = w.users.get(m.value)
                     email = user_info.emails[0].value if user_info.emails else ""
                     members.append({
@@ -245,7 +253,7 @@ def get_user_catalog_roles(email: str) -> list[dict[str, str]]:
             client_secret=settings.databricks_sp_client_secret,
         )
         users = list(w.users.list(filter=f'emails.value eq "{email}"', attributes="id"))
-        if not users:
+        if not users or not users[0].id:
             return []
         user_obj = w.users.get(users[0].id, attributes="groups")
         roles: list[dict[str, str]] = []
@@ -266,7 +274,7 @@ def get_video_presigned_url(object_key: str, expires_in: int = 3600) -> str:
     settings = get_settings()
     if settings.dev_mode:
         return f"https://example.com/mock-video/{object_key}?mock=true"
-    import boto3
+    import boto3  # type: ignore[import-untyped]
 
     s3 = boto3.client("s3", region_name=settings.aws_region)
     return s3.generate_presigned_url(
