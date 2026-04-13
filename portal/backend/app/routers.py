@@ -19,6 +19,7 @@ from app.models import (
     CurrentUser,
     DecideAccessRequest,
     SaveViewRequest,
+    SceneSearchRequest,
     SearchRequest,
     SendNotificationRequest,
     StatisticsRequest,
@@ -30,8 +31,18 @@ from app.models import (
 )
 from app.services import databricks as db_svc
 from app.services import mock_data as mock
+from app.services.embedding import embed_query
+from app.services.vector_search import get_vector_backend
 
 _NOW = lambda: datetime.now(timezone.utc)  # noqa: E731
+
+
+def _offset_to_iso(recorded_at: str, delta_sec: float) -> str:
+    """recorded_at (ISO 8601 UTC) に delta_sec 秒を加算して ISO 文字列で返す"""
+    from datetime import timedelta  # noqa: PLC0415
+
+    dt = datetime.fromisoformat(recorded_at.replace("Z", "+00:00"))
+    return (dt + timedelta(seconds=delta_sec)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -798,8 +809,10 @@ def get_statistics(body: StatisticsRequest, user: CurrentUser = Depends(get_curr
     settings = get_settings()
     if not settings.dev_mode:
         stats = []
+        region_clause = "region = ? AND " if body.region else ""
         for col in body.columns:
             col_name = col.split(".")[-1]
+            base_params = ([body.region] if body.region else []) + [body.time_from, body.time_to]
             rows = db_svc.execute_sql(
                 f"""SELECT
                         COUNT({col_name}) as count,
@@ -812,17 +825,17 @@ def get_statistics(body: StatisticsRequest, user: CurrentUser = Depends(get_curr
                         PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY {col_name}) as p75,
                         MAX({col_name}) as max
                     FROM vehicle_timeseries.drive.metrics
-                    WHERE region = ? AND recorded_at BETWEEN ? AND ?""",
-                (body.region, body.time_from, body.time_to),
+                    WHERE {region_clause}recorded_at BETWEEN ? AND ?""",
+                tuple(base_params),
             )
             hist_rows = db_svc.execute_sql(
                 f"""SELECT
                         WIDTH_BUCKET({col_name}, MIN({col_name}) OVER(), MAX({col_name}) OVER(), 20) as bucket,
                         COUNT(*) as cnt
                     FROM vehicle_timeseries.drive.metrics
-                    WHERE region = ? AND recorded_at BETWEEN ? AND ? AND {col_name} IS NOT NULL
+                    WHERE {region_clause}recorded_at BETWEEN ? AND ? AND {col_name} IS NOT NULL
                     GROUP BY bucket ORDER BY bucket""",
-                (body.region, body.time_from, body.time_to),
+                tuple(base_params),
             )
             r = rows[0] if rows else {}
             mn = float(r.get("min") or 0)
@@ -854,6 +867,66 @@ def get_statistics(body: StatisticsRequest, user: CurrentUser = Depends(get_curr
             )
         return {"stats": stats}
     return {"stats": mock.mock_statistics(body.columns, body.vehicle_id)}
+
+
+@router_analysis.post("/scene-search")
+def scene_search(
+    body: SceneSearchRequest,
+    user: CurrentUser = Depends(get_current_user),
+):
+    settings = get_settings()
+
+    scenes = mock.mock_scene_search(body.query, [], body.limit)
+
+    if not settings.dev_mode:
+        catalog_names = [r.catalog_name for r in user.catalog_roles if r.role in ("viewer", "editor", "owner")]
+        query_vector = embed_query(body.query)
+        backend = get_vector_backend()
+        scenes = backend.search(
+            query_vector,
+            catalog_names,
+            body.limit,
+            body.score_threshold,
+            body.time_from,
+            body.time_to,
+            body.vehicle_ids,
+        )
+        for s in scenes:
+            s["thumbnail_url"] = db_svc.get_video_presigned_url(s.pop("thumbnail_s3_key"))
+
+    return {
+        "total": len(scenes),
+        "scenes": scenes,
+    }
+
+
+@router_analysis.get("/scene-search/{scene_id}/clip")
+def get_scene_clip(
+    scene_id: str,
+    window_sec: int = Query(default=15, ge=1, le=60),
+    user: CurrentUser = Depends(get_current_user),
+):
+    settings = get_settings()
+
+    result = mock.mock_scene_clip(scene_id, window_sec)
+
+    if not settings.dev_mode:
+        backend = get_vector_backend()
+        frame = backend.get_frame_by_id(scene_id)
+        offset = float(frame["clip_offset_sec"])
+        if settings.clip_mode == "pre_cut":
+            clip_url = db_svc.get_video_presigned_url(frame["clip_s3_key"])
+        else:
+            clip_url = db_svc.get_video_presigned_url(frame["video_s3_key"])
+        result = {
+            "scene_id": scene_id,
+            "clip_url": clip_url,
+            "clip_start_at": _offset_to_iso(frame["recorded_at"], offset - window_sec),
+            "clip_end_at": _offset_to_iso(frame["recorded_at"], offset + window_sec),
+            "seek_to_sec": offset - window_sec,
+        }
+
+    return result
 
 
 # ── Alerts ────────────────────────────────────────────────────────────────────

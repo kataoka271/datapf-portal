@@ -488,3 +488,47 @@ def mock_alerts() -> list[dict]:
             "resolved_at": (_NOW - timedelta(days=2)).isoformat(),
         },
     ]
+
+
+def mock_scene_search(query: str, catalog_names: list[str], limit: int) -> list[dict]:
+    return [
+        {
+            "scene_id": "f3a2b1c0-0000-0000-0000-000000000001",
+            "vehicle_id": "VH-0001",
+            "recorded_at": "2026-04-09T10:23:45Z",
+            "similarity_score": 0.93,
+            "latitude": 35.6895,
+            "longitude": 139.6917,
+            "thumbnail_url": "https://picsum.photos/seed/scene1/320/180",
+        },
+        {
+            "scene_id": "f3a2b1c0-0000-0000-0000-000000000002",
+            "vehicle_id": "VH-0042",
+            "recorded_at": "2026-04-09T09:15:10Z",
+            "similarity_score": 0.88,
+            "latitude": 35.6812,
+            "longitude": 139.7671,
+            "thumbnail_url": "https://picsum.photos/seed/scene2/320/180",
+        },
+        {
+            "scene_id": "f3a2b1c0-0000-0000-0000-000000000003",
+            "vehicle_id": "VH-0001",
+            "recorded_at": "2026-04-09T11:02:33Z",
+            "similarity_score": 0.84,
+            "latitude": 35.6721,
+            "longitude": 139.7122,
+            "thumbnail_url": "https://picsum.photos/seed/scene3/320/180",
+        },
+    ][:limit]
+
+
+def mock_scene_clip(scene_id: str, window_sec: int) -> dict:
+    # dev モードでは実際の動画がないため静止画 URL を返す。
+    # <video> では読み込みエラーになるが dev 動作確認上は許容する。
+    return {
+        "scene_id": scene_id,
+        "clip_url": f"https://picsum.photos/seed/{scene_id}/640/360",
+        "clip_start_at": "2026-04-09T10:23:30Z",
+        "clip_end_at": "2026-04-09T10:24:00Z",
+        "seek_to_sec": 0.0,
+    }

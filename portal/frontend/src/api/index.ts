@@ -19,6 +19,8 @@ import type {
   Region,
   MatchedColumn,
   AdminUser,
+  SceneSearchResponse,
+  SceneClip,
 } from "@/types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "/v1";
@@ -250,12 +252,24 @@ export const analysisApi = {
       `/analysis/vehicles/${id}/video?at_time=${encodeURIComponent(atTime)}`,
     ),
   statistics: (body: {
-    region: Region;
+    region?: Region;
     time_from: string;
     time_to: string;
     columns: string[];
     vehicle_id?: string;
   }) => post<{ stats: StatResult[] }>("/analysis/statistics", body),
+  sceneSearch: (body: {
+    query: string;
+    limit?: number;
+    score_threshold?: number;
+    time_from?: string;
+    time_to?: string;
+    vehicle_ids?: string[];
+  }) => post<SceneSearchResponse>("/analysis/scene-search", body),
+  getSceneClip: (sceneId: string, windowSec?: number) => {
+    const q = windowSec !== undefined ? `?window_sec=${windowSec}` : "";
+    return get<SceneClip>(`/analysis/scene-search/${sceneId}/clip${q}`);
+  },
 };
 
 // ── Alerts ────────────────────────────────────────────────────────────────────

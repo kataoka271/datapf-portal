@@ -15,6 +15,7 @@ import { AppMarketplace } from "./components/apps/AppMarketplace";
 import { VehicleAnalysis } from "./components/analysis/VehicleAnalysis";
 import { StatisticsAnalysis } from "./components/analysis/StatisticsAnalysis";
 import { CrossAnalysis } from "./components/analysis/CrossAnalysis";
+import { SceneSearch } from "./components/analysis/SceneSearch";
 import {
   NotificationList,
   AlertList,
@@ -163,6 +164,12 @@ const statisticsRoute = createRoute({
   component: StatisticsAnalysis,
 });
 
+const sceneSearchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/analysis/scene-search",
+  component: SceneSearch,
+});
+
 // ── Notification & alert routes ───────────────────────────────────────────────
 const notificationsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -188,6 +195,7 @@ export const routeTree = rootRoute.addChildren([
   crossAnalysisRoute,
   vehiclesRoute,
   statisticsRoute,
+  sceneSearchRoute,
   notificationsRoute,
   alertsRoute,
 ]);

@@ -407,3 +407,69 @@ def test_health():
     res = client.get("/health")
     assert res.status_code == 200
     assert res.json()["status"] == "ok"
+
+
+# ── Scene Search ──────────────────────────────────────────────────────────────
+def test_scene_search():
+    res = client.post("/v1/analysis/scene-search", json={"query": "急ブレーキ"})
+    assert res.status_code == 200
+    data = res.json()
+    assert "total" in data
+    assert "scenes" in data
+    assert len(data["scenes"]) > 0
+    scene = data["scenes"][0]
+    assert "scene_id" in scene
+    assert "vehicle_id" in scene
+    assert "recorded_at" in scene
+    assert "similarity_score" in scene
+    assert "latitude" in scene
+    assert "longitude" in scene
+    assert "thumbnail_url" in scene
+
+
+def test_scene_search_with_limit():
+    res = client.post(
+        "/v1/analysis/scene-search",
+        json={"query": "高速道路", "limit": 1},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data["scenes"]) <= 1
+
+
+def test_scene_search_empty_query():
+    res = client.post("/v1/analysis/scene-search", json={"query": ""})
+    assert res.status_code == 422
+
+
+def test_scene_clip():
+    scene_id = "f3a2b1c0-0000-0000-0000-000000000001"
+    res = client.get(f"/v1/analysis/scene-search/{scene_id}/clip")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["scene_id"] == scene_id
+    assert "clip_url" in data
+    assert "clip_start_at" in data
+    assert "clip_end_at" in data
+    assert "seek_to_sec" in data
+    assert isinstance(data["seek_to_sec"], float)
+
+
+def test_scene_clip_custom_window():
+    scene_id = "f3a2b1c0-0000-0000-0000-000000000002"
+    res = client.get(f"/v1/analysis/scene-search/{scene_id}/clip?window_sec=30")
+    assert res.status_code == 200
+
+
+def test_statistics_without_region():
+    res = client.post(
+        "/v1/analysis/statistics",
+        json={
+            "time_from": "2026-04-01T00:00:00Z",
+            "time_to": "2026-04-12T23:59:59Z",
+            "columns": ["vehicle_timeseries.drive.metrics.vehicle_speed"],
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "stats" in data

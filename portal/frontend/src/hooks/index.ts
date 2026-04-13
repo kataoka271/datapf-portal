@@ -316,6 +316,19 @@ export function useStatistics() {
   return useMutation({ mutationFn: analysisApi.statistics });
 }
 
+export function useSceneSearch() {
+  return useMutation({ mutationFn: analysisApi.sceneSearch });
+}
+
+export function useSceneClip(sceneId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ["analysis", "scene", sceneId, "clip"],
+    queryFn: () => analysisApi.getSceneClip(sceneId!),
+    staleTime: 50 * 60_000,
+    enabled: !!sceneId && enabled,
+  });
+}
+
 // ── Alerts ────────────────────────────────────────────────────────────────────
 export function useAlerts(params?: { catalog_name?: string; status?: string }) {
   return useQuery({

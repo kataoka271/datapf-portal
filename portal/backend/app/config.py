@@ -24,6 +24,26 @@ class Settings(BaseSettings):
     oidc_jwks_uri: str = ""
     oidc_audience: str = ""
 
+    # Vector Search
+    vector_search_backend: str = "s3vectors"
+    s3_vectors_bucket: str = "portal-scene-vectors"
+    s3_vectors_index: str = "video-frames"
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
+    qdrant_collection: str = "video-frames"
+    pgvector_connection_string: str = ""
+    databricks_vector_search_endpoint: str = ""
+    databricks_vector_search_index: str = ""
+
+    # Embedding
+    embedding_lambda_name: str = "portal-embedding"
+    frame_embed_mode: str = "image_clip"
+    embed_model_name: str = "openai/clip-vit-base-patch32"
+    frame_embed_dim: int = 512
+
+    # Video clip
+    clip_mode: str = "browser_seek"
+
     # Dev mode: skip token verification
     dev_mode: bool = True
     dev_user_id: str = "dev-user-001"

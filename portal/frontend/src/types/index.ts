@@ -198,6 +198,36 @@ export interface StatResult {
   histogram: { bin_start: number; bin_end: number; count: number }[];
 }
 
+// ── Scene Search ──────────────────────────────────────────────────────────────
+export interface SceneResult {
+  scene_id: string;
+  vehicle_id: string;
+  recorded_at: string;
+  similarity_score: number;
+  latitude: number;
+  longitude: number;
+  thumbnail_s3_key: string;
+  video_s3_key: string;
+  clip_s3_key: string;
+  clip_offset_sec: number;
+  thumbnail_url?: string;
+}
+
+export interface SceneSearchResponse {
+  scenes: SceneResult[];
+  total: number;
+  query: string;
+}
+
+export interface SceneClip {
+  scene_id: string;
+  clip_start_at: string;
+  clip_end_at: string;
+  presigned_url: string;
+  seek_to_sec: number;
+  expires_at: string;
+}
+
 // ── Alerts ────────────────────────────────────────────────────────────────────
 export type AlertSeverity = "HIGH" | "MEDIUM" | "LOW";
 export type AlertStatus = "OPEN" | "RESOLVED";

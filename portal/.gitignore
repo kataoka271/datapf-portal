@@ -42,6 +42,8 @@ frontend/.env.local
 frontend/.env.*.local
 !frontend/.env.example
 .npm
+tsconfig.tsbuildinfo
+tsconfig.node.tsbuildinfo
 
 # ==== IDE ====
 .vscode/
