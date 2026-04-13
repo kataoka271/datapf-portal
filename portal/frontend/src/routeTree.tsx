@@ -16,6 +16,7 @@ import { VehicleAnalysis } from "./components/analysis/VehicleAnalysis";
 import { StatisticsAnalysis } from "./components/analysis/StatisticsAnalysis";
 import { CrossAnalysis } from "./components/analysis/CrossAnalysis";
 import { SceneSearch } from "./components/analysis/SceneSearch";
+import { GenieChatbot } from "./components/analysis/GenieChatbot";
 import {
   NotificationList,
   AlertList,
@@ -170,6 +171,12 @@ const sceneSearchRoute = createRoute({
   component: SceneSearch,
 });
 
+const genieRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/analysis/genie",
+  component: GenieChatbot,
+});
+
 // ── Notification & alert routes ───────────────────────────────────────────────
 const notificationsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -196,6 +203,7 @@ export const routeTree = rootRoute.addChildren([
   vehiclesRoute,
   statisticsRoute,
   sceneSearchRoute,
+  genieRoute,
   notificationsRoute,
   alertsRoute,
 ]);

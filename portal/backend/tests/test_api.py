@@ -473,3 +473,46 @@ def test_statistics_without_region():
     assert res.status_code == 200
     data = res.json()
     assert "stats" in data
+
+
+# ── Genie ─────────────────────────────────────────────────────────────────────
+def test_genie_start_conversation():
+    res = client.post(
+        "/v1/genie/conversations",
+        json={"catalog_name": "vehicle_timeseries", "message": "車速の平均を教えて"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "conversation_id" in data
+    assert "message_id" in data
+    assert "reply" in data
+    assert "status" in data
+    assert data["status"] == "COMPLETED"
+
+
+def test_genie_send_message():
+    conv_id = "conv-mock-001"
+    res = client.post(
+        f"/v1/genie/conversations/{conv_id}/messages",
+        json={"catalog_name": "vehicle_timeseries", "message": "もう少し詳しく"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["conversation_id"] == conv_id
+    assert "reply" in data
+
+
+def test_genie_forbidden_catalog():
+    res = client.post(
+        "/v1/genie/conversations",
+        json={"catalog_name": "ev_battery_data", "message": "データを見せて"},
+    )
+    assert res.status_code == 403
+
+
+def test_genie_invalid_message():
+    res = client.post(
+        "/v1/genie/conversations",
+        json={"catalog_name": "vehicle_timeseries", "message": ""},
+    )
+    assert res.status_code == 422

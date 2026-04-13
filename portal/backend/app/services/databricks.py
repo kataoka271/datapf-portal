@@ -288,6 +288,65 @@ def get_video_presigned_url(object_key: str, expires_in: int = 3600) -> str:
     )
 
 
+# ── Databricks Genie ─────────────────────────────────────────────────────────
+def _get_workspace_client():
+    settings = get_settings()
+    from databricks.sdk import WorkspaceClient
+
+    return WorkspaceClient(
+        host=settings.databricks_host,
+        client_id=settings.databricks_sp_client_id,
+        client_secret=settings.databricks_sp_client_secret,
+    )
+
+
+def _parse_genie_result(result: Any, conversation_id: str) -> dict[str, Any]:
+    """GenieMessage SDK オブジェクトから reply と query_result を抽出する。"""
+    reply = ""
+    query_result: dict[str, Any] | None = None
+
+    attachments = getattr(result, "attachments", None) or []
+    for att in attachments:
+        # テキスト添付
+        text_att = getattr(att, "text", None)
+        if text_att:
+            reply = getattr(text_att, "content", "") or ""
+        # クエリ結果添付
+        query_att = getattr(att, "query", None)
+        if query_att:
+            query_result_obj = getattr(query_att, "query_result", None)
+            if query_result_obj:
+                columns = [c.name for c in (getattr(query_result_obj, "columns", None) or [])]
+                rows = []
+                for row in getattr(query_result_obj, "data_typed_array", None) or []:
+                    rows.append([getattr(v, "str", None) for v in (getattr(row, "values", None) or [])])
+                query_result = {"columns": columns, "rows": rows}
+
+    message_id = str(getattr(result, "id", "") or "")
+    return {
+        "conversation_id": conversation_id,
+        "message_id": message_id,
+        "reply": reply,
+        "query_result": query_result,
+        "status": "COMPLETED",
+    }
+
+
+def genie_start_conversation(space_id: str, message: str) -> dict[str, Any]:
+    """新規 Genie 会話を開始し、結果が出るまでポーリングして返す。"""
+    w = _get_workspace_client()
+    result = w.genie.start_conversation_and_wait(space_id, content=message)
+    conversation_id = str(getattr(result, "conversation_id", "") or "")
+    return _parse_genie_result(result, conversation_id)
+
+
+def genie_send_message(space_id: str, conversation_id: str, message: str) -> dict[str, Any]:
+    """既存 Genie 会話にメッセージを送り、結果が出るまでポーリングして返す。"""
+    w = _get_workspace_client()
+    result = w.genie.create_message_and_wait(space_id, conversation_id, content=message)
+    return _parse_genie_result(result, conversation_id)
+
+
 # ── SES email ─────────────────────────────────────────────────────────────────
 def send_email(to: str, subject: str, body_html: str) -> None:
     settings = get_settings()

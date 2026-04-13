@@ -21,6 +21,7 @@ import type {
   AdminUser,
   SceneSearchResponse,
   SceneClip,
+  GenieQueryResult,
 } from "@/types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "/v1";
@@ -270,6 +271,28 @@ export const analysisApi = {
     const q = windowSec !== undefined ? `?window_sec=${windowSec}` : "";
     return get<SceneClip>(`/analysis/scene-search/${sceneId}/clip${q}`);
   },
+};
+
+// ── Genie ─────────────────────────────────────────────────────────────────────
+interface GenieReply {
+  conversation_id: string;
+  message_id: string;
+  reply: string;
+  query_result?: GenieQueryResult;
+  status: string;
+}
+
+export const genieApi = {
+  startConversation: (body: { catalog_name: string; message: string }) =>
+    post<GenieReply>("/genie/conversations", body),
+  sendMessage: (
+    conversationId: string,
+    body: { catalog_name: string; message: string },
+  ) =>
+    post<GenieReply>(
+      `/genie/conversations/${conversationId}/messages`,
+      body,
+    ),
 };
 
 // ── Alerts ────────────────────────────────────────────────────────────────────

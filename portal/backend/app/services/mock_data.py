@@ -532,3 +532,23 @@ def mock_scene_clip(scene_id: str, window_sec: int) -> dict:
         "clip_end_at": "2026-04-09T10:24:00Z",
         "seek_to_sec": 0.0,
     }
+
+
+def mock_genie_reply(message: str, catalog_name: str) -> dict:
+    return {
+        "conversation_id": "conv-mock-001",
+        "message_id": "msg-mock-001",
+        "reply": (
+            f"カタログ「{catalog_name}」に関するご質問「{message}」を分析しました。"
+            " 以下にサンプルデータを示します。"
+        ),
+        "query_result": {
+            "columns": ["vehicle_id", "event_time", "value"],
+            "rows": [
+                ["VH-001", "2025-01-01T00:00:00Z", 42.5],
+                ["VH-002", "2025-01-01T00:01:00Z", 38.2],
+                ["VH-003", "2025-01-01T00:02:00Z", 51.0],
+            ],
+        },
+        "status": "COMPLETED",
+    }

@@ -18,6 +18,7 @@ from app.models import (
     CreateCatalogRequest,
     CurrentUser,
     DecideAccessRequest,
+    GenieMessageRequest,
     SaveViewRequest,
     SceneSearchRequest,
     SearchRequest,
@@ -925,6 +926,58 @@ def get_scene_clip(
             "clip_end_at": _offset_to_iso(frame["recorded_at"], offset + window_sec),
             "seek_to_sec": offset - window_sec,
         }
+
+    return result
+
+
+# ── Genie ─────────────────────────────────────────────────────────────────────
+router_genie = APIRouter(prefix="/genie", tags=["genie"])
+
+
+@router_genie.post("/conversations")
+def start_genie_conversation(
+    body: GenieMessageRequest,
+    user: CurrentUser = Depends(get_current_user),
+):
+    """新規 Genie 会話を開始する（最初のメッセージ）"""
+    settings = get_settings()
+
+    accessible = {r.catalog_name for r in user.catalog_roles}
+    if body.catalog_name not in accessible:
+        raise HTTPException(status_code=403, detail="このカタログへのアクセス権がありません")
+
+    result = mock.mock_genie_reply(body.message, body.catalog_name)
+
+    if not settings.dev_mode:
+        space_id = settings.genie_space_id_map.get(body.catalog_name)
+        if not space_id:
+            raise HTTPException(status_code=404, detail="このカタログには Genie スペースが設定されていません")
+        result = db_svc.genie_start_conversation(space_id, body.message)
+
+    return result
+
+
+@router_genie.post("/conversations/{conversation_id}/messages")
+def send_genie_message(
+    conversation_id: str,
+    body: GenieMessageRequest,
+    user: CurrentUser = Depends(get_current_user),
+):
+    """既存 Genie 会話を継続してメッセージを送る"""
+    settings = get_settings()
+
+    accessible = {r.catalog_name for r in user.catalog_roles}
+    if body.catalog_name not in accessible:
+        raise HTTPException(status_code=403, detail="このカタログへのアクセス権がありません")
+
+    result = dict(mock.mock_genie_reply(body.message, body.catalog_name))
+    result["conversation_id"] = conversation_id
+
+    if not settings.dev_mode:
+        space_id = settings.genie_space_id_map.get(body.catalog_name)
+        if not space_id:
+            raise HTTPException(status_code=404, detail="このカタログには Genie スペースが設定されていません")
+        result = db_svc.genie_send_message(space_id, conversation_id, body.message)
 
     return result
 

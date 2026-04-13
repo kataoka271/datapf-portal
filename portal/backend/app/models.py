@@ -315,6 +315,12 @@ class QualityAlert(BaseModel):
     resolved_at: Optional[datetime] = None
 
 
+# ── Genie ────────────────────────────────────────────────────────────────────
+class GenieMessageRequest(BaseModel):
+    catalog_name: str = Field(pattern=r"^[a-zA-Z0-9_]+$")
+    message: str = Field(min_length=1, max_length=2000)
+
+
 # ── Pagination ────────────────────────────────────────────────────────────────
 class PaginatedResponse(BaseModel):
     total: int

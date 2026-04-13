@@ -15,6 +15,7 @@ from app.routers import (
     router_apps,
     router_auth,
     router_catalogs,
+    router_genie,
     router_notifications,
     router_search,
 )
@@ -43,6 +44,7 @@ app.include_router(router_catalogs, prefix=PREFIX)
 app.include_router(router_search, prefix=PREFIX)
 app.include_router(router_apps, prefix=PREFIX)
 app.include_router(router_analysis, prefix=PREFIX)
+app.include_router(router_genie, prefix=PREFIX)
 app.include_router(router_alerts, prefix=PREFIX)
 app.include_router(router_admin, prefix=PREFIX)
 

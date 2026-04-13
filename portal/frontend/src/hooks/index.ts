@@ -6,6 +6,7 @@ import {
   analysisApi,
   alertsApi,
   notificationsApi,
+  genieApi,
 } from "@/api";
 import type { Region } from "@/types";
 
@@ -326,6 +327,27 @@ export function useSceneClip(sceneId: string | null, enabled: boolean) {
     queryFn: () => analysisApi.getSceneClip(sceneId!),
     staleTime: 50 * 60_000,
     enabled: !!sceneId && enabled,
+  });
+}
+
+// ── Genie ─────────────────────────────────────────────────────────────────────
+export function useGenieChat() {
+  return useMutation({
+    mutationFn: ({
+      conversationId,
+      catalogName,
+      message,
+    }: {
+      conversationId: string | null;
+      catalogName: string;
+      message: string;
+    }) =>
+      conversationId
+        ? genieApi.sendMessage(conversationId, {
+            catalog_name: catalogName,
+            message,
+          })
+        : genieApi.startConversation({ catalog_name: catalogName, message }),
   });
 }
 

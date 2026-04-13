@@ -256,6 +256,18 @@ export interface AdminUser {
   last_login_at: string;
 }
 
+// ── Genie ─────────────────────────────────────────────────────────────────────
+export interface GenieQueryResult {
+  columns: string[];
+  rows: (string | number | null)[][];
+}
+
+export interface GenieMessage {
+  role: "user" | "assistant";
+  content: string;
+  query_result?: GenieQueryResult;
+}
+
 // ── Pagination ────────────────────────────────────────────────────────────────
 export interface PaginatedResponse<T> {
   total: number;

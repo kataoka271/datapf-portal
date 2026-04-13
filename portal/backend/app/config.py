@@ -44,6 +44,16 @@ class Settings(BaseSettings):
     # Video clip
     clip_mode: str = "browser_seek"
 
+    # Genie Space IDs: JSON mapping of catalog_name -> space_id
+    # e.g. GENIE_SPACE_IDS='{"vehicle_timeseries":"01abc...","fault_diagnostics":"02def..."}'
+    genie_space_ids: str = "{}"
+
+    @property
+    def genie_space_id_map(self) -> dict[str, str]:
+        import json
+
+        return json.loads(self.genie_space_ids)
+
     # Dev mode: skip token verification
     dev_mode: bool = True
     dev_user_id: str = "dev-user-001"
