@@ -897,6 +897,7 @@ def scene_search(
 
     return {
         "total": len(scenes),
+        "query": body.query,
         "scenes": scenes,
     }
 

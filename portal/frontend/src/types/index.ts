@@ -221,11 +221,10 @@ export interface SceneSearchResponse {
 
 export interface SceneClip {
   scene_id: string;
+  clip_url: string;
   clip_start_at: string;
   clip_end_at: string;
-  presigned_url: string;
   seek_to_sec: number;
-  expires_at: string;
 }
 
 // ── Alerts ────────────────────────────────────────────────────────────────────
