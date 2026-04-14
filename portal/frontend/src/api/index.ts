@@ -289,10 +289,7 @@ export const genieApi = {
     conversationId: string,
     body: { catalog_name: string; message: string },
   ) =>
-    post<GenieReply>(
-      `/genie/conversations/${conversationId}/messages`,
-      body,
-    ),
+    post<GenieReply>(`/genie/conversations/${conversationId}/messages`, body),
 };
 
 // ── Alerts ────────────────────────────────────────────────────────────────────

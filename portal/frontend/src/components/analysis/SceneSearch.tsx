@@ -186,7 +186,9 @@ export function SceneSearch() {
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {catalogs.map((cat) => {
-                    const selected = selectedCatalogs.includes(cat.catalog_name);
+                    const selected = selectedCatalogs.includes(
+                      cat.catalog_name,
+                    );
                     return (
                       <button
                         key={cat.catalog_name}

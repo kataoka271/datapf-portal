@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useCatalogs } from "@/hooks";
 import { useGenieChat } from "@/hooks";
 import { useUIStore } from "@/stores";
-import { Button, EmptyState, PageHeader, Spinner } from "@/components/common/ui";
+import {
+  Button,
+  EmptyState,
+  PageHeader,
+  Spinner,
+} from "@/components/common/ui";
 import type { GenieMessage, GenieQueryResult } from "@/types";
 
 function QueryResultTable({ result }: { result: GenieQueryResult }) {
@@ -113,7 +118,10 @@ export function GenieChatbot() {
           setMessages((prev) => [...prev, assistantMsg]);
         },
         onError: () => {
-          addToast({ type: "error", message: "Genie への問い合わせに失敗しました" });
+          addToast({
+            type: "error",
+            message: "Genie への問い合わせに失敗しました",
+          });
           // ユーザーメッセージを取り消す
           setMessages((prev) => prev.slice(0, -1));
         },

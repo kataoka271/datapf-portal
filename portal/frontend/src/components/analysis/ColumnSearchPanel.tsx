@@ -262,7 +262,8 @@ export function ColumnSearchPanel({
                       const accessOk =
                         catInfo &&
                         ["owner", "editor", "viewer"].includes(catInfo.my_role);
-                      const isPending = catInfo?.my_request_status === "PENDING";
+                      const isPending =
+                        catInfo?.my_request_status === "PENDING";
                       const needsApply = catInfo && !accessOk && !isPending;
                       return (
                         <>

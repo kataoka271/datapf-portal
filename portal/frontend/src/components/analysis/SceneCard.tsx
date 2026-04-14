@@ -167,7 +167,9 @@ export function SceneCard({
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <div>
                   <dt className="text-gray-400">車両 ID</dt>
-                  <dd className="font-mono text-gray-700">{scene.vehicle_id}</dd>
+                  <dd className="font-mono text-gray-700">
+                    {scene.vehicle_id}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-gray-400">類似度</dt>
