@@ -61,9 +61,12 @@ function VehicleMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
   const vehiclesRef = useRef(vehicles);
-  vehiclesRef.current = vehicles;
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+    vehiclesRef.current = vehicles;
+  });
 
   useEffect(() => {
     if (!containerRef.current) return;

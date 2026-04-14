@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useCrossSearch, useCatalogs } from "@/hooks";
 import { Button, Spinner } from "@/components/common/ui";
@@ -45,10 +45,15 @@ export function ColumnSearchPanel({
   onRequestAccess: (catalogName: string) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [checkedCols, setCheckedCols] = useState<MatchedColumn[]>([]);
+  const [checked, setChecked] = useState<{
+    data: typeof search.data;
+    cols: MatchedColumn[];
+  }>({ data: undefined, cols: [] });
   const [showUnapplied, setShowUnapplied] = useState(true);
   const search = useCrossSearch();
   const { data: catalogsData } = useCatalogs();
+
+  const checkedCols = checked.data === search.data ? checked.cols : [];
 
   const getCatalogStatus = (catalogName: string) =>
     catalogsData?.items.find((c) => c.catalog_name === catalogName);
@@ -58,10 +63,6 @@ export function ColumnSearchPanel({
     if (!catInfo) return true;
     return ["owner", "editor", "viewer"].includes(catInfo.my_role);
   };
-
-  useEffect(() => {
-    setCheckedCols([]);
-  }, [search.data]);
 
   const results = search.data?.matched_columns ?? [];
 
@@ -87,20 +88,25 @@ export function ColumnSearchPanel({
 
   const toggleCheck = (col: MatchedColumn) => {
     const key = colKey(col);
-    setCheckedCols((prev) =>
-      prev.some((c) => colKey(c) === key)
-        ? prev.filter((c) => colKey(c) !== key)
-        : [...prev, col],
-    );
+    const current = checked.data === search.data ? checked.cols : [];
+    setChecked({
+      data: search.data,
+      cols: current.some((c) => colKey(c) === key)
+        ? current.filter((c) => colKey(c) !== key)
+        : [...current, col],
+    });
   };
 
   const toggleSelectAll = () => {
-    setCheckedCols(allChecked ? [] : [...selectableResults]);
+    setChecked({
+      data: search.data,
+      cols: allChecked ? [] : [...selectableResults],
+    });
   };
 
   const handleRegister = () => {
     onRegister(checkedCols);
-    setCheckedCols([]);
+    setChecked({ data: search.data, cols: [] });
   };
 
   const handleSearch = () => {
