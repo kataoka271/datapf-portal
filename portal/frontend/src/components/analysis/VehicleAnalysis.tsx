@@ -78,6 +78,10 @@ export function VehicleAnalysis() {
             columnKeys={selectedColumns}
             timeFrom={timeFrom}
             timeTo={timeTo}
+            emptyTitle="カラム未登録"
+            emptyDescription="車両情報から分析対象を登録してください"
+            noDataTitle="データなし"
+            noDataDescription="選択した車両と時刻にデータがありません"
           />
         </div>
         <div className="col-span-2 space-y-4">

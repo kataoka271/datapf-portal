@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useVehicleTimeseries } from "@/hooks";
-import { Spinner } from "@/components/common/ui";
+import { Spinner, EmptyState } from "@/components/common/ui";
 import { CHART_COLORS } from "./analysisConstants";
 
 export interface TimeseriesChartProps {
@@ -19,6 +19,14 @@ export interface TimeseriesChartProps {
   timeFrom: string;
   timeTo: string;
   height?: number;
+  /** Custom title for the chart */
+  title?: string;
+  /** Custom empty state when no columns registered */
+  emptyTitle?: string;
+  emptyDescription?: string;
+  /** Custom empty state when no data found */
+  noDataTitle?: string;
+  noDataDescription?: string;
 }
 
 export function TimeseriesChart({
@@ -27,6 +35,11 @@ export function TimeseriesChart({
   timeFrom,
   timeTo,
   height = 200,
+  title = "時系列チャート",
+  emptyTitle = "カラム未登録",
+  emptyDescription = "左パネルで分析カラムを登録してください",
+  noDataTitle = "データなし",
+  noDataDescription = "選択した期間にデータがありません",
 }: TimeseriesChartProps) {
   const { data, isLoading } = useVehicleTimeseries(
     vehicleId,
@@ -34,8 +47,6 @@ export function TimeseriesChart({
     timeFrom,
     timeTo,
   );
-
-  if (!vehicleId || columnKeys.length === 0) return null;
 
   const merged: Record<string, unknown>[] = [];
   if (data?.series) {
@@ -56,11 +67,15 @@ export function TimeseriesChart({
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4">
-      <p className="text-xs font-medium text-gray-700 mb-3">時系列チャート</p>
+      <p className="text-xs font-medium text-gray-700 mb-3">{title}</p>
       {isLoading ? (
         <div className="flex justify-center py-8">
           <Spinner />
         </div>
+      ) : !vehicleId || columnKeys.length === 0 ? (
+        <EmptyState title={emptyTitle} description={emptyDescription} />
+      ) : merged.length === 0 ? (
+        <EmptyState title={noDataTitle} description={noDataDescription} />
       ) : (
         <ResponsiveContainer width="100%" height={height}>
           <LineChart data={merged}>

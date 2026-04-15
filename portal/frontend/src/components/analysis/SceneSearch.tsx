@@ -2,21 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
   BarChart,
   Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 import {
   useSceneSearch,
   useVehicleStatus,
-  useVehicleTimeseries,
   useVehicleVideo,
   useStatistics,
 } from "@/hooks";
@@ -30,6 +26,7 @@ import {
 import { MouAgreementModal } from "@/components/catalog/MouAgreementModal";
 import { ColumnSearchPanel, colKey } from "./ColumnSearchPanel";
 import { SceneCard } from "./SceneCard";
+import { TimeseriesChart } from "./TimeseriesChart";
 import type { MatchedColumn, SceneResult, StatResult } from "@/types";
 import { CHART_COLORS as COLORS } from "./analysisConstants";
 
@@ -339,29 +336,6 @@ function VehicleAnalysisSection({
     new Date(atTime).getTime() - 10 * 60_000,
   ).toISOString();
   const timeTo = atTime;
-  const { data: tsData, isLoading: tsLoading } = useVehicleTimeseries(
-    vehicleId,
-    columnKeys,
-    timeFrom,
-    timeTo,
-  );
-
-  const merged: Record<string, unknown>[] = [];
-  if (tsData?.series) {
-    const allTimes = Array.from(
-      new Set(tsData.series.flatMap((s) => s.data.map((d) => d.timestamp))),
-    ).sort();
-    allTimes.forEach((t) => {
-      const row: Record<string, unknown> = {
-        timestamp: new Date(t).toLocaleTimeString("ja-JP"),
-      };
-      tsData.series.forEach((s) => {
-        const pt = s.data.find((d) => d.timestamp === t);
-        row[s.display_name] = pt?.value;
-      });
-      merged.push(row);
-    });
-  }
 
   return (
     <div className="grid grid-cols-5 gap-4">
@@ -396,38 +370,14 @@ function VehicleAnalysisSection({
       </div>
 
       {/* Timeseries chart */}
-      <div className="col-span-3 bg-white rounded-xl border border-gray-100 p-4">
-        <p className="text-xs font-medium text-gray-700 mb-3">時系列チャート</p>
-        {columns.length === 0 ? (
-          <EmptyState
-            title="カラム未登録"
-            description="左パネルで分析カラムを登録してください"
-          />
-        ) : tsLoading ? (
-          <div className="flex justify-center py-8">
-            <Spinner />
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={merged}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="timestamp" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: 11 }} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              {(tsData?.series ?? []).map((s, i) => (
-                <Line
-                  key={s.column_full_name}
-                  type="monotone"
-                  dataKey={s.display_name}
-                  stroke={COLORS[i % COLORS.length]}
-                  dot={false}
-                  strokeWidth={1.5}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        )}
+      <div className="col-span-3">
+        <TimeseriesChart
+          vehicleId={vehicleId}
+          columnKeys={columnKeys}
+          timeFrom={timeFrom}
+          timeTo={timeTo}
+          height={200}
+        />
       </div>
     </div>
   );
