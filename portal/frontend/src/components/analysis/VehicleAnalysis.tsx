@@ -1,5 +1,5 @@
 import { useAnalysisStore } from "@/stores";
-import { useVehicles } from "@/hooks";
+import { useVehicles, useVehicleVideo } from "@/hooks";
 import { Spinner, PageHeader } from "@/components/common/ui";
 import { REGION_OPTIONS } from "./analysisConstants";
 import { VehicleMap } from "./VehicleMap";
@@ -20,6 +20,11 @@ export function VehicleAnalysis() {
   const { data: vehiclesData, isLoading } = useVehicles(
     region,
     atTime + ":00Z",
+  );
+  const { data: videoData } = useVehicleVideo(
+    selectedVehicleId,
+    atTime + ":00Z",
+    !!selectedVehicleId,
   );
 
   const timeFrom = new Date(
@@ -75,12 +80,32 @@ export function VehicleAnalysis() {
             timeTo={timeTo}
           />
         </div>
-        <div className="col-span-2">
+        <div className="col-span-2 space-y-4">
           <VehicleStatusPanel
             vehicleId={selectedVehicleId}
             atTime={atTime + ":00Z"}
             variant="detailed"
           />
+          {videoData && (
+            <div className="w-full bg-black rounded-xl overflow-hidden">
+              <video
+                key={videoData.presigned_url}
+                src={videoData.presigned_url}
+                controls
+                autoPlay
+                className="w-full"
+              />
+              <div className="flex justify-end p-2">
+                <a
+                  href={videoData.presigned_url}
+                  download
+                  className="text-xs text-teal-400 hover:text-teal-300"
+                >
+                  ダウンロード
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

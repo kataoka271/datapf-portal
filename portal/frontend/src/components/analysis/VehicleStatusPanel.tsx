@@ -1,14 +1,13 @@
-import { useState } from "react";
 import { useVehicleStatus, useVehicleVideo } from "@/hooks";
 import { useAnalysisStore } from "@/stores";
-import { Button, Spinner, EmptyState } from "@/components/common/ui";
+import { Spinner, EmptyState } from "@/components/common/ui";
 
 export interface VehicleStatusPanelProps {
   vehicleId: string | null;
   /** Pre-formatted ISO timestamp ready to pass to API hooks */
   atTime: string;
   /**
-   * "detailed" – divide-y list with column-toggle buttons and video modal.
+   * "detailed" – divide-y list with column-toggle buttons.
    *              Also reads selectedColumns/toggleColumn from useAnalysisStore.
    * "compact"  – grid-cols-2 tile layout with inline video player (default).
    */
@@ -25,8 +24,6 @@ function DetailedPanel({
 }) {
   const { selectedColumns, toggleColumn } = useAnalysisStore();
   const { data: status, isLoading } = useVehicleStatus(vehicleId, atTime);
-  const [videoOpen, setVideoOpen] = useState(false);
-  const { data: video } = useVehicleVideo(vehicleId, atTime, videoOpen);
 
   if (isLoading) {
     return (
@@ -79,47 +76,6 @@ function DetailedPanel({
           );
         })}
       </div>
-      {status?.has_video && (
-        <Button
-          variant="secondary"
-          className="w-full text-xs"
-          onClick={() => setVideoOpen(true)}
-        >
-          動画を見る
-        </Button>
-      )}
-      {videoOpen && video && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-black rounded-xl overflow-hidden w-full max-w-2xl">
-            <div className="flex justify-between p-2">
-              <span className="text-white/70 text-xs">
-                {vehicleId} — 車載動画
-              </span>
-              <button
-                onClick={() => setVideoOpen(false)}
-                className="text-white/70 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            <video
-              src={video.presigned_url}
-              controls
-              className="w-full"
-              style={{ maxHeight: "60vh" }}
-            />
-            <div className="flex justify-end p-2">
-              <a
-                href={video.presigned_url}
-                download
-                className="text-xs text-teal-400 hover:text-teal-300"
-              >
-                ダウンロード
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
