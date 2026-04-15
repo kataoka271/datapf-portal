@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useStatistics, useCrossSearch } from "@/hooks";
+import { useStatistics } from "@/hooks";
 import { useUIStore } from "@/stores";
 import {
   Button,
@@ -16,15 +16,10 @@ import {
   EmptyState,
   PageHeader,
 } from "@/components/common/ui";
+import { MouAgreementModal } from "@/components/catalog/MouAgreementModal";
+import { ColumnSearchPanel, colKey } from "./ColumnSearchPanel";
+import { REGION_OPTIONS, CHART_COLORS } from "./analysisConstants";
 import type { Region, StatResult, MatchedColumn } from "@/types";
-
-const REGION_OPTIONS: { value: Region; label: string }[] = [
-  { value: "japan", label: "日本" },
-  { value: "europe", label: "欧州" },
-  { value: "north_america", label: "北米" },
-];
-
-const CHART_COLORS = ["#1D9E75", "#185FA5", "#BA7517", "#993556", "#534AB7"];
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({
@@ -133,61 +128,6 @@ function StatCard({
   );
 }
 
-// ── Column selector panel ─────────────────────────────────────────────────────
-function ColumnSelector({
-  onSelect,
-}: {
-  onSelect: (col: MatchedColumn) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const search = useCrossSearch();
-
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) =>
-            e.key === "Enter" && query && search.mutate({ query })
-          }
-          placeholder="カラムを検索..."
-          className="flex-1 h-8 px-3 text-xs border border-gray-200 rounded-md bg-white text-gray-900 placeholder-gray-400 outline-none focus:border-teal-400"
-        />
-        <Button
-          size="sm"
-          variant="primary"
-          onClick={() => query && search.mutate({ query })}
-          loading={search.isPending}
-        >
-          検索
-        </Button>
-      </div>
-      {search.isPending && (
-        <div className="flex justify-center py-4">
-          <Spinner />
-        </div>
-      )}
-      <div className="space-y-1 max-h-48 overflow-y-auto">
-        {(search.data?.matched_columns ?? []).map((col, i) => (
-          <button
-            key={i}
-            onClick={() => onSelect(col)}
-            className="w-full text-left px-2.5 py-2 rounded-lg border border-gray-100 hover:border-teal-300 hover:bg-teal-50 transition-colors"
-          >
-            <p className="text-xs font-medium text-gray-900 font-mono">
-              {col.column_name}
-            </p>
-            <p className="text-xs text-gray-400 truncate">
-              {col.catalog_name}.{col.schema_name}.{col.table_name}
-            </p>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function StatisticsAnalysis() {
   const [region, setRegion] = useState<Region>("japan");
@@ -199,30 +139,32 @@ export function StatisticsAnalysis() {
   const [timeTo, setTimeTo] = useState(() =>
     new Date().toISOString().slice(0, 16),
   );
-  const [columns, setColumns] = useState<MatchedColumn[]>([]);
-  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [registeredColumns, setRegisteredColumns] = useState<MatchedColumn[]>(
+    [],
+  );
+  const [applyTarget, setApplyTarget] = useState<string | null>(null);
   const stats = useStatistics();
   const { addToast } = useUIStore();
 
-  const addColumn = (col: MatchedColumn) => {
-    const key = `${col.catalog_name}.${col.schema_name}.${col.table_name}.${col.column_name}`;
-    if (
-      !columns.find(
-        (c) =>
-          `${c.catalog_name}.${c.schema_name}.${c.table_name}.${c.column_name}` ===
-          key,
-      )
-    ) {
-      setColumns((prev) => [...prev, col]);
-    }
-    setSelectorOpen(false);
+  const handleRegister = (cols: MatchedColumn[]) => {
+    setRegisteredColumns((prev) => {
+      const next = [...prev];
+      for (const col of cols) {
+        if (!next.some((c) => colKey(c) === colKey(col))) {
+          next.push(col);
+        }
+      }
+      return next;
+    });
   };
 
-  const removeColumn = (i: number) =>
-    setColumns((prev) => prev.filter((_, j) => j !== i));
+  const handleUnregister = (col: MatchedColumn) =>
+    setRegisteredColumns((prev) => prev.filter((c) => colKey(c) !== colKey(col)));
 
-  const handleRun = () => {
-    if (columns.length === 0) {
+  const handleClearAll = () => setRegisteredColumns([]);
+
+  const handleAnalyze = () => {
+    if (registeredColumns.length === 0) {
       addToast({ type: "error", message: "カラムを追加してください" });
       return;
     }
@@ -231,10 +173,7 @@ export function StatisticsAnalysis() {
         region,
         time_from: new Date(timeFrom).toISOString(),
         time_to: new Date(timeTo).toISOString(),
-        columns: columns.map(
-          (c) =>
-            `${c.catalog_name}.${c.schema_name}.${c.table_name}.${c.column_name}`,
-        ),
+        columns: registeredColumns.map((c) => colKey(c)),
       },
       {
         onError: () =>
@@ -244,110 +183,98 @@ export function StatisticsAnalysis() {
   };
 
   return (
-    <div className="p-6 space-y-4">
-      <PageHeader title="統計分析" />
+    <div className="flex h-full overflow-hidden">
+      <ColumnSearchPanel
+        registeredColumns={registeredColumns}
+        onRegister={handleRegister}
+        onUnregister={handleUnregister}
+        onClearAll={handleClearAll}
+        onAnalyze={handleAnalyze}
+        onRequestAccess={setApplyTarget}
+      />
 
-      {/* Toolbar */}
-      <div className="flex gap-2 flex-wrap items-center">
-        <select
-          value={region}
-          onChange={(e) => setRegion(e.target.value as Region)}
-          className="h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400"
-        >
-          {REGION_OPTIONS.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-        <input
-          type="datetime-local"
-          value={timeFrom}
-          onChange={(e) => setTimeFrom(e.target.value)}
-          className="h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400"
+      {applyTarget && (
+        <MouAgreementModal
+          catalogName={applyTarget}
+          onClose={() => setApplyTarget(null)}
+          onSuccess={() => setApplyTarget(null)}
         />
-        <span className="text-gray-400 text-sm">〜</span>
-        <input
-          type="datetime-local"
-          value={timeTo}
-          onChange={(e) => setTimeTo(e.target.value)}
-          className="h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400"
-        />
-        <div className="flex gap-1.5 ml-auto">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setSelectorOpen(!selectorOpen)}
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <PageHeader title="統計分析" />
+
+        {/* Toolbar */}
+        <div className="flex gap-2 flex-wrap items-center">
+          <select
+            value={region}
+            onChange={(e) => setRegion(e.target.value as Region)}
+            className="h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400"
           >
-            + カラム追加
-          </Button>
+            {REGION_OPTIONS.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+          <input
+            type="datetime-local"
+            value={timeFrom}
+            onChange={(e) => setTimeFrom(e.target.value)}
+            className="h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400"
+          />
+          <span className="text-gray-400 text-sm">〜</span>
+          <input
+            type="datetime-local"
+            value={timeTo}
+            onChange={(e) => setTimeTo(e.target.value)}
+            className="h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400"
+          />
           <Button
             size="sm"
             variant="primary"
-            onClick={handleRun}
+            onClick={handleAnalyze}
             loading={stats.isPending}
+            className="ml-auto"
           >
             分析実行
           </Button>
         </div>
-      </div>
 
-      {/* Column selector */}
-      {selectorOpen && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <p className="text-xs font-medium text-gray-700 mb-3">
-            分析対象カラムを選択
-          </p>
-          <ColumnSelector onSelect={addColumn} />
-        </div>
-      )}
-
-      {/* Selected column chips */}
-      {columns.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {columns.map((c, i) => (
-            <span
-              key={i}
-              className="flex items-center gap-1 px-2.5 py-1 bg-teal-50 border border-teal-200 rounded-full text-xs text-teal-800 font-mono"
-            >
-              {c.column_name}
-              <button
-                onClick={() => removeColumn(i)}
-                className="text-teal-400 hover:text-teal-700 ml-0.5"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Results */}
-      {stats.isPending ? (
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
-      ) : !stats.data ? (
-        columns.length === 0 ? (
-          <EmptyState
-            title="カラムを追加して分析を実行してください"
-            description="「カラム追加」ボタンから横断検索でカラムを選択できます"
-          />
-        ) : (
-          <EmptyState title="「分析実行」ボタンを押してください" />
-        )
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {stats.data.stats.map((s, i) => (
-            <StatCard
-              key={s.column_full_name}
-              stat={s}
-              color={CHART_COLORS[i % CHART_COLORS.length]}
-              onRemove={() => removeColumn(i)}
+        {/* Results */}
+        {stats.isPending ? (
+          <div className="flex justify-center py-16">
+            <Spinner />
+          </div>
+        ) : !stats.data ? (
+          registeredColumns.length === 0 ? (
+            <EmptyState
+              title="カラムを追加して分析を実行してください"
+              description="左パネルの横断検索でカラムを選択し、「分析」ボタンを押してください"
             />
-          ))}
-        </div>
-      )}
+          ) : (
+            <EmptyState title="「分析」ボタンを押してください" />
+          )
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {stats.data.stats.map((s, i) => (
+              <StatCard
+                key={s.column_full_name}
+                stat={s}
+                color={CHART_COLORS[i % CHART_COLORS.length]}
+                onRemove={() =>
+                  handleUnregister(
+                    registeredColumns.find(
+                      (c) => colKey(c) === s.column_full_name,
+                    ) ?? registeredColumns[i],
+                  )
+                }
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
