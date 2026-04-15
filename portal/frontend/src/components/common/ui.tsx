@@ -337,6 +337,42 @@ export function ConfirmDialog({
   );
 }
 
+// ── Modal overlay ─────────────────────────────────────────────────────────────
+export interface ModalOverlayProps {
+  onClose?: () => void;
+  children: ReactNode;
+  maxWidth?: "sm" | "md" | "lg";
+}
+
+export function ModalOverlay({
+  onClose,
+  children,
+  maxWidth = "md",
+}: ModalOverlayProps) {
+  const widthCls = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl" }[
+    maxWidth
+  ];
+  return (
+    <div
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className={clsx("bg-white rounded-xl shadow-xl w-full", widthCls)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Form helper classes ───────────────────────────────────────────────────────
+export const formInputCls =
+  "w-full h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400";
+export const formLabelCls = "block text-xs font-medium text-gray-700 mb-1";
+export const formErrCls = "text-xs text-red-500 mt-0.5";
+
 // ── Section header ────────────────────────────────────────────────────────────
 export function PageHeader({
   title,

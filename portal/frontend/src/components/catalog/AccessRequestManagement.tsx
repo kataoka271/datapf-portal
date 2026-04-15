@@ -9,6 +9,7 @@ import {
   EmptyState,
   Spinner,
   PageHeader,
+  ModalOverlay,
 } from "@/components/common/ui";
 
 export function AccessRequestManagement({
@@ -173,8 +174,8 @@ export function AccessRequestManagement({
       )}
 
       {rejectTarget && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-5 w-full max-w-sm">
+        <ModalOverlay maxWidth="sm" onClose={() => setRejectTarget(null)}>
+          <div className="p-5">
             <h3 className="text-base font-medium text-gray-900 mb-3">
               却下理由（任意）
             </h3>
@@ -198,7 +199,7 @@ export function AccessRequestManagement({
               </Button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

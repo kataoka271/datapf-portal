@@ -6,6 +6,7 @@ import {
   EmptyState,
   Spinner,
   PageHeader,
+  ModalOverlay,
 } from "@/components/common/ui";
 import type { MatchedColumn } from "@/types";
 
@@ -224,8 +225,8 @@ export function CrossSearch() {
       )}
 
       {saveOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-5 w-full max-w-sm">
+        <ModalOverlay maxWidth="sm" onClose={() => setSaveOpen(false)}>
+          <div className="p-5">
             <h3 className="text-base font-medium text-gray-900 mb-3">
               VIEW を保存
             </h3>
@@ -267,7 +268,7 @@ export function CrossSearch() {
               </Button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

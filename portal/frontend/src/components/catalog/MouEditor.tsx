@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useMou, useUpdateMou } from "@/hooks";
 import { useUIStore } from "@/stores";
-import { Button, Spinner, PageHeader } from "@/components/common/ui";
+import { Button, Spinner, PageHeader, ModalOverlay } from "@/components/common/ui";
 
 export function MouEditor({ catalogName }: { catalogName: string }) {
   const { data: mou, isLoading } = useMou(catalogName);
@@ -196,8 +196,8 @@ export function MouEditor({ catalogName }: { catalogName: string }) {
 
       {/* Confirm dialog */}
       {confirmOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-5 w-full max-w-sm">
+        <ModalOverlay maxWidth="sm" onClose={() => setConfirmOpen(false)}>
+          <div className="p-5">
             <h3 className="text-base font-medium text-gray-900 mb-2">
               バージョンを発行しますか？
             </h3>
@@ -220,7 +220,7 @@ export function MouEditor({ catalogName }: { catalogName: string }) {
               </Button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

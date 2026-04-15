@@ -31,8 +31,7 @@ import { MouAgreementModal } from "@/components/catalog/MouAgreementModal";
 import { ColumnSearchPanel, colKey } from "./ColumnSearchPanel";
 import { SceneCard } from "./SceneCard";
 import type { MatchedColumn, SceneResult, StatResult } from "@/types";
-
-const COLORS = ["#1D9E75", "#185FA5", "#BA7517", "#993556", "#534AB7"];
+import { CHART_COLORS as COLORS } from "./analysisConstants";
 
 type SelectedScene = {
   scene_id: string;

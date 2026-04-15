@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useCreateCatalog } from "@/hooks";
 import { useUIStore } from "@/stores";
-import { Button } from "@/components/common/ui";
+import { Button, ModalOverlay } from "@/components/common/ui";
 
 const schema = z.object({
   catalog_name: z
@@ -55,8 +55,8 @@ export function CatalogCreateModal({ onClose, onSuccess }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col">
+    <ModalOverlay maxWidth="md">
+      <div className="flex flex-col">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-base font-medium text-gray-900">
             カタログ作成申請
@@ -144,6 +144,6 @@ export function CatalogCreateModal({ onClose, onSuccess }: Props) {
           </div>
         </form>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

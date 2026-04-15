@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useMou, useCreateAccessRequest } from "@/hooks";
 import { useUIStore } from "@/stores";
-import { Button, Spinner } from "@/components/common/ui";
+import { Button, Spinner, ModalOverlay } from "@/components/common/ui";
 
 interface Props {
   catalogName: string;
@@ -66,8 +66,8 @@ export function MouAgreementModal({ catalogName, onClose, onSuccess }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+    <ModalOverlay maxWidth="md">
+      <div className="flex flex-col max-h-[90vh]">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h2 className="text-base font-medium text-gray-900">閲覧申請</h2>
@@ -150,6 +150,6 @@ export function MouAgreementModal({ catalogName, onClose, onSuccess }: Props) {
           </Button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

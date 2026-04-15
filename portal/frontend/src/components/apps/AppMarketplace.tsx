@@ -15,6 +15,10 @@ import {
   EmptyState,
   ConfirmDialog,
   PageHeader,
+  ModalOverlay,
+  formInputCls,
+  formLabelCls,
+  formErrCls,
 } from "@/components/common/ui";
 import { appsApi } from "@/api";
 import type { DataApp } from "@/types";
@@ -211,8 +215,8 @@ export function AppMarketplace() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+        <ModalOverlay maxWidth="md" onClose={() => setShowForm(false)}>
+          <div className="flex flex-col max-h-[90vh]">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
               <h2 className="text-base font-medium text-gray-900">
                 データアプリ登録申請
@@ -228,7 +232,7 @@ export function AppMarketplace() {
               <AppRegistrationForm onSuccess={() => setShowForm(false)} />
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );
@@ -285,10 +289,9 @@ export function AppRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
     }
   };
 
-  const inputCls =
-    "w-full h-8 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 outline-none focus:border-teal-400";
-  const errCls = "text-xs text-red-500 mt-0.5";
-  const labelCls = "block text-xs font-medium text-gray-700 mb-1";
+  const inputCls = formInputCls;
+  const errCls = formErrCls;
+  const labelCls = formLabelCls;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
