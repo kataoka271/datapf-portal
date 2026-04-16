@@ -1,12 +1,16 @@
 """
 FastAPI application entry point.
 - uvicorn app.main:app --reload   →  local development server
-- Lambda handler via Mangum       →  AWS Lambda
+- Databricks Apps (app.yaml)      →  production on Databricks Apps platform
 """
+
+import os
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend.app.routers import (
     router_admin,
@@ -63,10 +67,17 @@ def health():
     return {"status": "ok"}
 
 
-# ── Lambda handler ────────────────────────────────────────────────────────────
-try:
-    from mangum import Mangum
+# ── Static files (pre-built React SPA) ───────────────────────────────────────
+# Mounted last so /v1/* API routes take priority.
+# html=True serves index.html for any path that has no matching file (SPA routing).
+_static_dir = Path(__file__).parent.parent / "static"
+if _static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")
 
-    handler = Mangum(app, lifespan="off")
-except ImportError:
-    handler = None  # not running in Lambda
+
+# ── Local entry point ─────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import uvicorn
+
+    port = int(os.environ.get("DATABRICKS_APP_PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

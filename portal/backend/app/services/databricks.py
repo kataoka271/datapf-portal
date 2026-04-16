@@ -17,30 +17,17 @@ def _get_connection():
     settings = get_settings()
     try:
         import databricks.sql as dbsql
+        from databricks.sdk.core import Config
 
+        cfg = Config()
         conn = dbsql.connect(
-            server_hostname=settings.databricks_host.replace("https://", ""),
+            server_hostname=cfg.host.replace("https://", ""),
             http_path=f"/sql/1.0/warehouses/{settings.databricks_sql_warehouse_id}",
-            credentials_provider=lambda: {"Authorization": f"Bearer {_get_sp_token()}"},
+            credentials_provider=cfg.authenticate,
         )
         return conn
     except Exception:
         return None  # dev mode fallback
-
-
-def _get_sp_token() -> str:
-    """Get OAuth2 M2M token for the portal service principal."""
-    settings = get_settings()
-    if settings.dev_mode:
-        return "dev-mock-pat"
-    from databricks.sdk import WorkspaceClient
-
-    w = WorkspaceClient(
-        host=settings.databricks_host,
-        client_id=settings.databricks_sp_client_id,
-        client_secret=settings.databricks_sp_client_secret,
-    )
-    return w.config.token
 
 
 def execute_sql(query: str, params: tuple = ()) -> list[dict[str, Any]]:
@@ -103,11 +90,7 @@ def _modify_group_member(group_name: str, user_id: str, add: bool) -> None:
     try:
         from databricks.sdk import WorkspaceClient
 
-        w = WorkspaceClient(
-            host=settings.databricks_host,
-            client_id=settings.databricks_sp_client_id,
-            client_secret=settings.databricks_sp_client_secret,
-        )
+        w = WorkspaceClient()
         from databricks.sdk.service.iam import Patch, PatchOp, PatchSchema
 
         groups = list(w.groups.list(filter=f'displayName eq "{group_name}"'))
@@ -144,11 +127,7 @@ def create_unity_catalog(catalog_name: str, owner_user_id: str) -> None:
         from databricks.sdk import WorkspaceClient
         from databricks.sdk.service.catalog import PermissionsChange, Privilege, SecurableType
 
-        w = WorkspaceClient(
-            host=settings.databricks_host,
-            client_id=settings.databricks_sp_client_id,
-            client_secret=settings.databricks_sp_client_secret,
-        )
+        w = WorkspaceClient()
         w.catalogs.create(name=catalog_name, comment=f"Created by portal for {owner_user_id}")
 
         # Create owner group if it doesn't exist
@@ -191,11 +170,7 @@ def get_catalog_members(catalog_name: str) -> list[dict[str, Any]]:
 
         from databricks.sdk import WorkspaceClient
 
-        w = WorkspaceClient(
-            host=settings.databricks_host,
-            client_id=settings.databricks_sp_client_id,
-            client_secret=settings.databricks_sp_client_secret,
-        )
+        w = WorkspaceClient()
         members: list[dict[str, Any]] = []
         for role in ("owner", "editor", "viewer"):
             group_name = f"catalog-{role}-{catalog_name}"
@@ -232,11 +207,7 @@ def get_user_email(user_id: str) -> str | None:
     try:
         from databricks.sdk import WorkspaceClient
 
-        w = WorkspaceClient(
-            host=settings.databricks_host,
-            client_id=settings.databricks_sp_client_id,
-            client_secret=settings.databricks_sp_client_secret,
-        )
+        w = WorkspaceClient()
         user_info = w.users.get(user_id)
         return user_info.emails[0].value if user_info.emails else None
     except Exception:
@@ -251,11 +222,7 @@ def get_user_catalog_roles(email: str) -> list[dict[str, str]]:
     try:
         from databricks.sdk import WorkspaceClient
 
-        w = WorkspaceClient(
-            host=settings.databricks_host,
-            client_id=settings.databricks_sp_client_id,
-            client_secret=settings.databricks_sp_client_secret,
-        )
+        w = WorkspaceClient()
         users = list(w.users.list(filter=f'emails.value eq "{email}"', attributes="id"))
         if not users or not users[0].id:
             return []
@@ -290,14 +257,9 @@ def get_video_presigned_url(object_key: str, expires_in: int = 3600) -> str:
 
 # ── Databricks Genie ─────────────────────────────────────────────────────────
 def _get_workspace_client():
-    settings = get_settings()
     from databricks.sdk import WorkspaceClient
 
-    return WorkspaceClient(
-        host=settings.databricks_host,
-        client_id=settings.databricks_sp_client_id,
-        client_secret=settings.databricks_sp_client_secret,
-    )
+    return WorkspaceClient()
 
 
 def _parse_genie_result(result: Any, conversation_id: str) -> dict[str, Any]:

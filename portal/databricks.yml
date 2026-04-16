@@ -1,0 +1,27 @@
+bundle:
+  name: datapf-portal
+
+resources:
+  apps:
+    datapf-portal:
+      name: datapf-portal
+      source_code_path: ./backend
+      description: "データ基盤ポータル — Databricks Apps"
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE
+
+variables:
+  warehouse_id:
+    description: "Databricks SQL Warehouse ID"
+
+targets:
+  dev:
+    default: true
+    variables:
+      warehouse_id: ""  # fill in: databricks warehouses list --profile <PROFILE>
+  prod:
+    variables:
+      warehouse_id: ""  # fill in: databricks warehouses list --profile <PROFILE>

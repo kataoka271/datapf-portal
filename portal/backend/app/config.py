@@ -20,10 +20,6 @@ class Settings(BaseSettings):
     # Portal Delta catalog
     portal_catalog: str = "portal"
 
-    # Auth
-    oidc_jwks_uri: str = ""
-    oidc_audience: str = ""
-
     # Vector Search
     vector_search_backend: str = "s3vectors"
     s3_vectors_bucket: str = "portal-scene-vectors"

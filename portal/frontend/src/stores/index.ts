@@ -1,28 +1,19 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { CurrentUser, Region } from "@/types";
 
 // ── Auth Store ────────────────────────────────────────────────────────────────
+// Auth is handled by the Databricks Apps proxy. User info is fetched from /v1/auth/me on startup.
 interface AuthState {
   user: CurrentUser | null;
-  token: string | null;
   setUser: (user: CurrentUser | null) => void;
-  setToken: (token: string | null) => void;
   clear: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      token: null,
-      setUser: (user) => set({ user }),
-      setToken: (token) => set({ token }),
-      clear: () => set({ user: null, token: null }),
-    }),
-    { name: "auth-store", partialize: (s) => ({ token: s.token }) },
-  ),
-);
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  setUser: (user) => set({ user }),
+  clear: () => set({ user: null }),
+}));
 
 // ── UI Store ──────────────────────────────────────────────────────────────────
 interface Toast {

@@ -26,19 +26,11 @@ import type {
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "/v1";
 
-// Token は Zustand authStore から注入 (interceptor パターン)
-let _getToken: () => string | null = () => null;
-export function setTokenGetter(fn: () => string | null) {
-  _getToken = fn;
-}
-
 async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = _getToken();
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });

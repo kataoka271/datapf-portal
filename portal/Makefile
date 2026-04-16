@@ -11,13 +11,14 @@
 # ==============================================================================
 
 ENV           ?= dev
+PROFILE       ?= DEFAULT
 TF_DIR        := infra/terraform/environments/$(ENV)
 BACKEND_DIR   := backend
 FRONTEND_DIR  := frontend
 LAMBDA_ZIP    := $(BACKEND_DIR)/lambda.zip
 LAYER_ZIP     := $(BACKEND_DIR)/layer.zip
 
-.PHONY: all build build-layer build-lambda build-frontend \
+.PHONY: all build build-layer build-lambda build-frontend build-app deploy-app \
         deploy plan apply destroy \
         frontend-deploy lambda-update \
         tf-init tf-fmt tf-validate \
@@ -58,6 +59,27 @@ build-frontend:
 
 ## 全ビルド
 build: build-layer build-lambda build-frontend
+
+# ── Databricks Apps ───────────────────────────────────────────────────────────
+
+## フロントエンドをビルドして backend/static/ にコピー（Databricks Apps 用）
+build-app:
+	@echo ">>> Databricks Apps 用フロントエンドをビルドします..."
+	cd $(FRONTEND_DIR) && npm ci && npm run build
+	mkdir -p $(BACKEND_DIR)/static
+	cp -r $(FRONTEND_DIR)/dist/. $(BACKEND_DIR)/static/
+	@echo ">>> ビルド完成: $(BACKEND_DIR)/static/"
+
+## Databricks Apps にデプロイ（ビルド → bundle deploy → bundle run）
+deploy-app: build-app
+	@echo "========================================"
+	@echo "  Databricks Apps デプロイ開始: ENV=$(ENV)"
+	@echo "========================================"
+	cd .. && databricks bundle deploy -t $(ENV) --profile $(PROFILE)
+	cd .. && databricks bundle run datapf-portal -t $(ENV) --profile $(PROFILE)
+	@echo "========================================"
+	@echo "  Databricks Apps デプロイ完了!"
+	@echo "========================================"
 
 # ── Terraform ─────────────────────────────────────────────────────────────────
 
@@ -164,6 +186,7 @@ fmt:
 clean:
 	rm -f $(LAMBDA_ZIP) $(LAYER_ZIP)
 	rm -rf $(BACKEND_DIR)/layer_build
+	rm -rf $(BACKEND_DIR)/static
 	rm -rf $(FRONTEND_DIR)/dist
 	rm -f $(TF_DIR)/tfplan
 	@echo ">>> クリーン完了"
@@ -184,6 +207,8 @@ help:
 	@echo "  make frontend-deploy ENV=dev  フロントエンドのみ再デプロイ"
 	@echo "  make lambda-update ENV=dev    Lambda コードのみ高速更新"
 	@echo "  make outputs ENV=dev          Terraform outputs を表示"
+	@echo "  make build-app                Databricks Apps 用フロントエンドビルド"
+	@echo "  make deploy-app ENV=dev PROFILE=xxx  Databricks Apps にデプロイ"
 	@echo "  make test                     バックエンドテスト実行"
 	@echo "  make clean                    ビルド成果物を削除"
 	@echo ""
