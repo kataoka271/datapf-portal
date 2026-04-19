@@ -31,8 +31,7 @@ dist/
 venv/
 env/
 .env
-# .env.example は残す
-!backend/.env.example
+.env.deploy
 
 # ==== Node / Frontend ====
 node_modules/

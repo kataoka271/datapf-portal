@@ -5,8 +5,8 @@ import time
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.config import get_settings
-from app.models import CatalogRole, CurrentUser
+from backend.app.config import get_settings
+from backend.app.models import CatalogRole, CurrentUser
 
 security = HTTPBearer(auto_error=False)
 

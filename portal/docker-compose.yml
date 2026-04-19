@@ -1,12 +1,14 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/app:/app/app
+      - ./backend:/app/backend
     env_file:
-      - ./backend/.env
+      - .env
     environment:
       DEV_MODE: "true"
 

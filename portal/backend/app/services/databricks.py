@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.config import get_settings
+from backend.app.config import get_settings
 
 
 # ── SQL execution ─────────────────────────────────────────────────────────────

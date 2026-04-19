@@ -10,9 +10,9 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.auth import get_current_user, require_admin
-from app.config import get_settings
-from app.models import (
+from backend.app.auth import get_current_user, require_admin
+from backend.app.config import get_settings
+from backend.app.models import (
     CreateAccessRequestBody,
     CreateAppRequest,
     CreateCatalogRequest,
@@ -30,10 +30,10 @@ from app.models import (
     UpdateMouRequest,
     VehiclesRequest,
 )
-from app.services import databricks as db_svc
-from app.services import mock_data as mock
-from app.services.embedding import embed_query
-from app.services.vector_search import get_vector_backend
+from backend.app.services import databricks as db_svc
+from backend.app.services import mock_data as mock
+from backend.app.services.embedding import embed_query
+from backend.app.services.vector_search import get_vector_backend
 
 _NOW = lambda: datetime.now(timezone.utc)  # noqa: E731
 

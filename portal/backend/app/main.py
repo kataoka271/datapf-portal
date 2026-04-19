@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routers import (
+from backend.app.routers import (
     router_admin,
     router_alerts,
     router_analysis,

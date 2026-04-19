@@ -7,7 +7,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from app.config import get_settings
+from backend.app.config import get_settings
 
 
 class VectorSearchBackend(ABC):

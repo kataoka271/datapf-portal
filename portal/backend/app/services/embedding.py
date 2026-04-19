@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from app.config import get_settings
+from backend.app.config import get_settings
 
 
 def embed_query(query_text: str) -> list[float]:
