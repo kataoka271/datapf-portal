@@ -13,12 +13,13 @@ services:
       DEV_MODE: "true"
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/index.html:/app/index.html
+      - ./frontend:/app/frontend
     environment:
       VITE_API_URL: "http://backend:8000"
     depends_on:
