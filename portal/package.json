@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite frontend",
-    "build": "tsc -b frontend/tsconfig.json && vite build frontend",
+    "build": "vite build frontend --emptyOutDir",
     "preview": "vite preview frontend",
     "typecheck": "tsc --noEmit --project frontend/tsconfig.json",
     "lint": "eslint frontend/src",
