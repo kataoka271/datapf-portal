@@ -3,10 +3,10 @@ FROM node:20-slim AS frontend-builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --ignore-scripts
 
-COPY frontend/ ./frontend/
+COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Run the app (simulates Databricks Apps runtime)
@@ -22,25 +22,22 @@ RUN curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/insta
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Install Python dependencies (no dev extras)
-COPY pyproject.toml uv.lock ./
-RUN uv sync -U --no-dev
+COPY backend/pyproject.toml ./
+RUN uv pip install --system --no-cache -r pyproject.toml
 
 # Copy backend source
-COPY backend/ ./backend/
+COPY backend/src/ ./src/
+RUN uv pip install --system --no-cache -e .
 
 # Copy pre-built frontend into backend/static/ so FastAPI serves it
-COPY --from=frontend-builder /app/backend/static/ ./backend/static/
+COPY --from=frontend-builder /app/dist/ ./src/backend/static/
 
 # Copy Databricks Apps manifest
 COPY app.yaml ./
-
-ENV PATH="/app/.venv/bin:$PATH"
-# backend/ uses "from backend.app.*" imports, so /app must be on PYTHONPATH
-ENV PYTHONPATH="/app"
 
 EXPOSE 8000
 
 COPY databricks.yml ./
 
 # Mirror app.yaml command; PORT falls back to 8000 for local runs
-CMD ["uvicorn", "backend.app.main:app"]
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

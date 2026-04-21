@@ -6,8 +6,8 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.6 /uv /uvx /bin/
 
 COPY pyproject.toml .
 RUN uv pip install --system --no-cache -r pyproject.toml
-
-COPY backend/ ./backend/
+COPY src/ ./src/
+RUN uv pip install --system --no-cache .
 
 ENV DEV_MODE=true \
     DEV_USER_ID=dev-user-001 \

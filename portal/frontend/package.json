@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite frontend",
-    "build": "vite build frontend --emptyOutDir",
-    "preview": "vite preview frontend",
-    "typecheck": "tsc --noEmit --project frontend/tsconfig.json",
-    "lint": "eslint frontend/src",
-    "format": "prettier --write frontend/src"
+    "dev": "vite",
+    "build": "vite build --emptyOutDir",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "lint": "eslint src",
+    "format": "prettier --write src"
   },
   "dependencies": {
     "@deck.gl/layers": "^9.0.24",
