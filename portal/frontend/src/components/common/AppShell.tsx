@@ -1,78 +1,80 @@
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { clsx } from "clsx";
+import { useTranslation } from "react-i18next";
 import { useAuthStore, useUIStore } from "@/stores";
 import { useNotifications, useMarkAllRead } from "@/hooks";
 import { NotifIcon } from "./ui";
+import i18n from "@/i18n";
 import type { ReactNode } from "react";
 
-// ── Sidebar nav items ─────────────────────────────────────────────────────────
-const NAV = [
+// ── Sidebar nav config (uses translation keys) ────────────────────────────────
+const NAV_CONFIG = [
   {
-    group: "データカタログ",
+    groupKey: "nav.catalog",
     items: [
       {
-        label: "マーケットプレイス",
+        labelKey: "nav.marketplace",
         to: "/catalogs/marketplace",
         icon: "M4 6h16M4 10h16M4 14h8",
       },
       {
-        label: "横断検索",
+        labelKey: "nav.crossSearch",
         to: "/catalogs/search",
         icon: "M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z",
       },
     ],
   },
   {
-    group: "データアプリ",
+    groupKey: "nav.dataApps",
     items: [
       {
-        label: "アプリ一覧",
+        labelKey: "nav.appList",
         to: "/apps",
         icon: "M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zm0 8a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2z",
       },
     ],
   },
   {
-    group: "データ分析",
+    groupKey: "nav.dataAnalysis",
     items: [
       {
-        label: "横断分析",
+        labelKey: "nav.crossAnalysis",
         to: "/analysis/cross",
         icon: "M4 6h16M4 12h16M4 18h7m4-6l3 3-3 3",
       },
       {
-        label: "車両分析",
+        labelKey: "nav.vehicleAnalysis",
         to: "/analysis/vehicles",
         icon: "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4",
       },
       {
-        label: "統計分析",
+        labelKey: "nav.statisticsAnalysis",
         to: "/analysis/statistics",
         icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
       },
       {
-        label: "シーンサーチ",
+        labelKey: "nav.sceneSearch",
         to: "/analysis/scene-search",
         icon: "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z",
       },
       {
-        label: "Genie",
+        labelKey: "nav.genie",
         to: "/analysis/genie",
         icon: "M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z",
       },
     ],
   },
   {
-    group: "管理",
+    groupKey: "nav.admin",
     items: [
       {
-        label: "品質アラート",
+        labelKey: "nav.qualityAlerts",
         to: "/alerts",
         icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
       },
       {
-        label: "通知",
+        labelKey: "nav.notifications",
         to: "/notifications",
         icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
       },
@@ -82,9 +84,10 @@ const NAV = [
 
 // ── Header ────────────────────────────────────────────────────────────────────
 function Header() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clear);
-  const { sidebarOpen, setSidebarOpen } = useUIStore();
+  const { sidebarOpen, setSidebarOpen, language, setLanguage } = useUIStore();
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { data: notifs } = useNotifications({ is_read: false, limit: 10 });
@@ -93,6 +96,11 @@ function Header() {
   const handleLogout = () => {
     clearAuth();
     window.location.href = "/";
+  };
+
+  const handleSetLanguage = (lang: "ja" | "en") => {
+    setLanguage(lang);
+    i18n.changeLanguage(lang);
   };
 
   return (
@@ -117,7 +125,7 @@ function Header() {
       </button>
 
       <span className="text-white text-base font-semibold flex-1">
-        データ基盤ポータル
+        {t("header.title")}
       </span>
 
       {/* Notification bell */}
@@ -149,12 +157,14 @@ function Header() {
         {notifOpen && (
           <div className="absolute right-0 top-10 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">通知</span>
+              <span className="text-sm font-semibold text-gray-700">
+                {t("header.notifications")}
+              </span>
               <button
                 onClick={() => markAll.mutate()}
                 className="text-sm text-teal-600 hover:text-teal-700"
               >
-                すべて既読
+                {t("header.markAllRead")}
               </button>
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
@@ -179,7 +189,7 @@ function Header() {
               ))}
               {(notifs?.items ?? []).length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-8">
-                  未読の通知はありません
+                  {t("header.noUnread")}
                 </p>
               )}
             </div>
@@ -188,7 +198,7 @@ function Header() {
               onClick={() => setNotifOpen(false)}
               className="block text-center text-sm text-teal-600 hover:text-teal-700 py-2.5 border-t border-gray-100"
             >
-              すべて見る
+              {t("header.viewAll")}
             </Link>
           </div>
         )}
@@ -217,7 +227,7 @@ function Header() {
               className="fixed inset-0 z-40"
               onClick={() => setUserMenuOpen(false)}
             />
-            <div className="absolute right-0 top-10 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+            <div className="absolute right-0 top-10 w-52 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100">
                 <p className="text-sm font-medium text-gray-900 truncate">
                   {user?.display_name ?? ""}
@@ -225,6 +235,36 @@ function Header() {
                 <p className="text-xs text-gray-500 truncate">
                   {user?.email ?? ""}
                 </p>
+              </div>
+              {/* Language toggle */}
+              <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  {t("header.language")}
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleSetLanguage("ja")}
+                    className={clsx(
+                      "text-xs px-2 py-0.5 rounded font-medium transition-colors",
+                      language === "ja"
+                        ? "bg-teal-600 text-white"
+                        : "text-gray-500 hover:bg-gray-100",
+                    )}
+                  >
+                    JA
+                  </button>
+                  <button
+                    onClick={() => handleSetLanguage("en")}
+                    className={clsx(
+                      "text-xs px-2 py-0.5 rounded font-medium transition-colors",
+                      language === "en"
+                        ? "bg-teal-600 text-white"
+                        : "text-gray-500 hover:bg-gray-100",
+                    )}
+                  >
+                    EN
+                  </button>
+                </div>
               </div>
               <button
                 onClick={handleLogout}
@@ -243,7 +283,7 @@ function Header() {
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-                ログアウト
+                {t("header.logout")}
               </button>
             </div>
           </>
@@ -291,15 +331,21 @@ function NavItem({
 }
 
 function Sidebar() {
+  const { t } = useTranslation();
   return (
     <aside className="h-full w-56 bg-[#1A3A5C] flex flex-col py-3 gap-0.5 overflow-y-auto">
-      {NAV.map((group) => (
-        <div key={group.group}>
+      {NAV_CONFIG.map((group) => (
+        <div key={group.groupKey}>
           <p className="text-xs font-semibold text-white/40 uppercase tracking-widest px-4 pt-4 pb-2">
-            {group.group}
+            {t(group.groupKey)}
           </p>
           {group.items.map((item) => (
-            <NavItem key={item.to} {...item} />
+            <NavItem
+              key={item.to}
+              label={t(item.labelKey)}
+              to={item.to}
+              icon={item.icon}
+            />
           ))}
         </div>
       ))}

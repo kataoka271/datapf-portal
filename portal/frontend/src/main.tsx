@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree";
 import { ToastContainer } from "./components/common/ui";
+import "./i18n";
 import "./index.css";
 
 const queryClient = new QueryClient({

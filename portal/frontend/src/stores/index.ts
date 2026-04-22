@@ -25,14 +25,17 @@ interface Toast {
 interface UIState {
   sidebarOpen: boolean;
   toasts: Toast[];
+  language: "ja" | "en";
   setSidebarOpen: (v: boolean) => void;
   addToast: (t: Omit<Toast, "id">) => void;
   removeToast: (id: string) => void;
+  setLanguage: (lang: "ja" | "en") => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarOpen: true,
   toasts: [],
+  language: navigator.language.startsWith("ja") ? "ja" : "en",
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   addToast: (t) =>
     set((s) => ({
@@ -40,6 +43,7 @@ export const useUIStore = create<UIState>((set) => ({
     })),
   removeToast: (id) =>
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  setLanguage: (language) => set({ language }),
 }));
 
 // ── Analysis Store ────────────────────────────────────────────────────────────

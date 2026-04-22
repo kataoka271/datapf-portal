@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect } from "react";
 import { clsx } from "clsx";
+import { useTranslation } from "react-i18next";
 import type {
   NotificationType,
   AlertSeverity,
@@ -99,31 +100,33 @@ export function Badge({
 
 // ── Role badge ────────────────────────────────────────────────────────────────
 export function RoleBadge({ role }: { role: UserRole }) {
-  const map: Record<UserRole, { label: string; variant: BadgeVariant }> = {
-    owner: { label: "オーナー", variant: "purple" },
-    editor: { label: "編集者", variant: "blue" },
-    viewer: { label: "閲覧者", variant: "green" },
-    user: { label: "一般", variant: "gray" },
-    none: { label: "未申請", variant: "gray" },
+  const { t } = useTranslation();
+  const map: Record<UserRole, { labelKey: string; variant: BadgeVariant }> = {
+    owner: { labelKey: "role.owner", variant: "purple" },
+    editor: { labelKey: "role.editor", variant: "blue" },
+    viewer: { labelKey: "role.viewer", variant: "green" },
+    user: { labelKey: "role.user", variant: "gray" },
+    none: { labelKey: "role.none", variant: "gray" },
   };
-  const { label, variant } = map[role];
-  return <Badge variant={variant}>{label}</Badge>;
+  const { labelKey, variant } = map[role];
+  return <Badge variant={variant}>{t(labelKey)}</Badge>;
 }
 
 // ── Request status badge ──────────────────────────────────────────────────────
 export function RequestStatusBadge({ status }: { status: RequestStatus }) {
-  if (!status) return <Badge variant="gray">未申請</Badge>;
-  const map: Record<string, { label: string; variant: BadgeVariant }> = {
-    PENDING: { label: "審査中", variant: "amber" },
-    APPROVED: { label: "閲覧中", variant: "green" },
-    REJECTED: { label: "却下済み", variant: "red" },
-    REVOKED: { label: "解除済み", variant: "gray" },
+  const { t } = useTranslation();
+  if (!status) return <Badge variant="gray">{t("status.none")}</Badge>;
+  const map: Record<string, { labelKey: string; variant: BadgeVariant }> = {
+    PENDING: { labelKey: "status.pending", variant: "amber" },
+    APPROVED: { labelKey: "status.approved", variant: "green" },
+    REJECTED: { labelKey: "status.rejected", variant: "red" },
+    REVOKED: { labelKey: "status.revoked", variant: "gray" },
   };
-  const { label, variant } = map[status] ?? {
-    label: status,
+  const { labelKey, variant } = map[status] ?? {
+    labelKey: status,
     variant: "gray" as BadgeVariant,
   };
-  return <Badge variant={variant}>{label}</Badge>;
+  return <Badge variant={variant}>{t(labelKey)}</Badge>;
 }
 
 // ── Alert severity badge ──────────────────────────────────────────────────────
@@ -306,6 +309,28 @@ function Toast({
 }
 
 // ── Confirm dialog ────────────────────────────────────────────────────────────
+function ConfirmDialogButtons({
+  onCancel,
+  onConfirm,
+  loading,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+  loading?: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex gap-2 justify-end">
+      <Button variant="secondary" onClick={onCancel}>
+        {t("dialog.cancel")}
+      </Button>
+      <Button variant="danger" onClick={onConfirm} loading={loading}>
+        {t("dialog.confirm")}
+      </Button>
+    </div>
+  );
+}
+
 export function ConfirmDialog({
   title,
   message,
@@ -324,14 +349,7 @@ export function ConfirmDialog({
       <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
         <h3 className="text-base font-medium text-gray-900 mb-2">{title}</h3>
         <p className="text-sm text-gray-600 mb-5">{message}</p>
-        <div className="flex gap-2 justify-end">
-          <Button variant="secondary" onClick={onCancel}>
-            キャンセル
-          </Button>
-          <Button variant="danger" onClick={onConfirm} loading={loading}>
-            確認
-          </Button>
-        </div>
+        <ConfirmDialogButtons onCancel={onCancel} onConfirm={onConfirm} loading={loading} />
       </div>
     </div>
   );
