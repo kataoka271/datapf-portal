@@ -18,6 +18,11 @@ FRONTEND_DIR  := frontend
 LAMBDA_ZIP    := $(BACKEND_DIR)/lambda.zip
 LAYER_ZIP     := $(BACKEND_DIR)/layer.zip
 
+# Workaround: Databricks CLI v0.296 bundles Terraform with an expired OpenPGP key.
+# Point to the system Terraform binary and tell the CLI to accept its version.
+export DATABRICKS_TF_EXEC_PATH := $(shell which terraform 2>/dev/null)
+export DATABRICKS_TF_VERSION   := $(shell terraform version 2>/dev/null | head -1 | sed 's/Terraform v//')
+
 .PHONY: all build build-layer build-lambda build-frontend build-app deploy-app \
         deploy plan apply destroy \
         frontend-deploy lambda-update \
