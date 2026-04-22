@@ -1,0 +1,27 @@
+bundle:
+  name: datapf-portal-setup
+
+include:
+  - resources/*.yml
+
+variables:
+  portal_catalog:
+    description: "Unity Catalog name that holds all portal governance tables (default: portal)"
+    default: portal
+  warehouse_id:
+    description: "SQL Warehouse ID used by the backend (DATABRICKS_SQL_WAREHOUSE_ID in .env)"
+    default: ""
+  sp_app_id:
+    description: "Service principal application ID (DATABRICKS_SP_CLIENT_ID in .env)"
+    default: ""
+
+targets:
+  dev:
+    default: true
+    variables:
+      portal_catalog: portal
+
+  prod:
+    mode: production
+    variables:
+      portal_catalog: portal

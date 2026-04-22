@@ -1,0 +1,43 @@
+resources:
+  jobs:
+    setup:
+      name: "[datapf-portal] Infrastructure Setup"
+      queue:
+        enabled: false
+
+      # Run once manually: databricks bundle run setup -t dev --profile DEFAULT
+      parameters:
+        - name: portal_catalog
+          default: ${var.portal_catalog}
+        - name: warehouse_id
+          default: ${var.warehouse_id}
+        - name: sp_app_id
+          default: ${var.sp_app_id}
+
+      tasks:
+        - task_key: create_catalog_and_schemas
+          description: "Create portal catalog and 5 Unity Catalog schemas"
+          notebook_task:
+            notebook_path: ../src/01_create_catalog.py
+            base_parameters:
+              portal_catalog: "{{job.parameters.portal_catalog}}"
+
+        - task_key: create_tables
+          description: "Create all 10 Delta Tables (idempotent: CREATE TABLE IF NOT EXISTS)"
+          depends_on:
+            - task_key: create_catalog_and_schemas
+          notebook_task:
+            notebook_path: ../src/02_create_tables.py
+            base_parameters:
+              portal_catalog: "{{job.parameters.portal_catalog}}"
+
+        - task_key: grant_permissions
+          description: "Grant service principal privileges and set up group naming convention"
+          depends_on:
+            - task_key: create_tables
+          notebook_task:
+            notebook_path: ../src/03_grant_permissions.py
+            base_parameters:
+              portal_catalog: "{{job.parameters.portal_catalog}}"
+              sp_app_id: "{{job.parameters.sp_app_id}}"
+              warehouse_id: "{{job.parameters.warehouse_id}}"
