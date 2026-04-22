@@ -21,13 +21,14 @@ RUN curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/insta
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Install Python dependencies (no dev extras)
-COPY backend/pyproject.toml ./
+# Install Python dependencies (no dev extras) — layer-cache friendly
+COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv pip install --system --no-cache -r pyproject.toml
 
-# Copy backend source
+# Copy backend source and install the project package
 COPY backend/src/ ./src/
 RUN uv pip install --system --no-cache -e .
+RUN uv lock
 
 # Copy pre-built frontend into backend/static/ so FastAPI serves it
 COPY --from=frontend-builder /app/dist/ ./src/backend/static/
@@ -38,6 +39,7 @@ COPY app.yaml ./
 EXPOSE 8000
 
 COPY databricks.yml ./
+
 
 # Mirror app.yaml command; PORT falls back to 8000 for local runs
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

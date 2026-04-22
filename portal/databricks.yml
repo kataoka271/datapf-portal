@@ -16,12 +16,17 @@ resources:
 variables:
   warehouse_id:
     description: "Databricks SQL Warehouse ID"
+  DEV_WAREHOUSE_ID:
+    description: "開発用 Databricks SQL Warehouse ID"
+  PROD_WAREHOUSE_ID:
+    description: "本番用 Databricks SQL Warehouse ID"
+
 
 targets:
   dev:
     default: true
     variables:
-      warehouse_id: ""  # fill in: databricks warehouses list --profile <PROFILE>
+      warehouse_id: ${var.DEV_WAREHOUSE_ID}
   prod:
     variables:
-      warehouse_id: ""  # fill in: databricks warehouses list --profile <PROFILE>
+      warehouse_id: ${var.PROD_WAREHOUSE_ID}
