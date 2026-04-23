@@ -105,6 +105,14 @@ export interface SavedView {
 }
 
 // ── Apps ──────────────────────────────────────────────────────────────────────
+export interface AppMouDefinition {
+  app_id: string;
+  version: string;
+  mou_text: string;
+  checklist: ChecklistItem[];
+  updated_at: string;
+}
+
 export interface DataApp {
   app_id: string;
   name: string;

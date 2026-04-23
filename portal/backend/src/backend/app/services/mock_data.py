@@ -402,6 +402,47 @@ def mock_statistics(columns: list[str], vehicle_id: str | None = None) -> list[d
     return stats
 
 
+def mock_app_mou(app_id: str) -> dict:
+    return {
+        "app_id": app_id,
+        "version": "v1",
+        "mou_text": """# データアプリ利用規約
+
+## 1. データの取り扱い
+
+本アプリを通じてアクセスするデータは**業務目的**に限定されます。
+
+## 2. 禁止事項
+
+- データの第三者への開示・共有
+- 目的外利用
+- スクリーンショット等による外部への情報持ち出し
+
+## 3. セキュリティ要件
+
+アクセス権限は本人のみに帰属し、共有は禁止します。
+""",
+        "checklist": [
+            {
+                "item_id": "app-ck-001",
+                "label": "業務目的以外に使用しないことに同意する",
+                "required": True,
+            },
+            {
+                "item_id": "app-ck-002",
+                "label": "データを第三者に共有しないことに同意する",
+                "required": True,
+            },
+            {
+                "item_id": "app-ck-003",
+                "label": "セキュリティポリシーを理解していることを確認した",
+                "required": False,
+            },
+        ],
+        "updated_at": (_NOW - timedelta(days=1)).isoformat(),
+    }
+
+
 def mock_apps() -> list[dict]:
     return [
         {

@@ -258,10 +258,31 @@ def test_get_app_not_found():
 
 
 def test_subscribe_app():
-    res = client.post("/v1/apps/app-002/subscriptions", json={})
+    res = client.post(
+        "/v1/apps/app-002/subscriptions",
+        json={
+            "mou_version": "v1",
+            "checklist_responses": [
+                {"item_id": "app-ck-001", "checked": True},
+                {"item_id": "app-ck-002", "checked": True},
+                {"item_id": "app-ck-003", "checked": False},
+            ],
+        },
+    )
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "ACTIVE"
+
+
+def test_get_app_mou():
+    res = client.get("/v1/apps/app-001/mou")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["app_id"] == "app-001"
+    assert "version" in data
+    assert "mou_text" in data
+    assert "checklist" in data
+    assert len(data["checklist"]) > 0
 
 
 def test_unsubscribe_app():

@@ -159,6 +159,19 @@ class SavedView(BaseModel):
 
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
+class AppMouDefinition(BaseModel):
+    app_id: str
+    version: str
+    mou_text: str
+    checklist: list[ChecklistItem] = []
+    updated_at: datetime
+
+
+class SubscribeAppRequest(BaseModel):
+    mou_version: str
+    checklist_responses: list[ChecklistResponse]
+
+
 class DataApp(BaseModel):
     app_id: str
     name: str

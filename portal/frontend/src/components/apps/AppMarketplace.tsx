@@ -2,12 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  useApps,
-  useSubscribeApp,
-  useUnsubscribeApp,
-  useCatalogs,
-} from "@/hooks";
+import { useApps, useUnsubscribeApp, useCatalogs } from "@/hooks";
 import { useUIStore, useAuthStore } from "@/stores";
 import {
   Button,
@@ -20,6 +15,7 @@ import {
   formLabelCls,
   formErrCls,
 } from "@/components/common/ui";
+import { AppMouAgreementModal } from "@/components/apps/AppMouAgreementModal";
 import { appsApi } from "@/api";
 import type { DataApp } from "@/types";
 
@@ -27,9 +23,8 @@ import type { DataApp } from "@/types";
 function AppCard({ app }: { app: DataApp }) {
   const { addToast } = useUIStore();
   const user = useAuthStore((s) => s.user);
-  const subscribe = useSubscribeApp();
   const unsubscribe = useUnsubscribeApp();
-  const [confirmSub, setConfirmSub] = useState(false);
+  const [showMou, setShowMou] = useState(false);
   const [confirmUnsub, setConfirmUnsub] = useState(false);
 
   const isOwner = app.owner_user_id === user?.user_id;
@@ -100,7 +95,7 @@ function AppCard({ app }: { app: DataApp }) {
             <Button
               size="sm"
               variant="primary"
-              onClick={() => setConfirmSub(true)}
+              onClick={() => setShowMou(true)}
             >
               使用開始
             </Button>
@@ -108,22 +103,12 @@ function AppCard({ app }: { app: DataApp }) {
         </div>
       </div>
 
-      {confirmSub && (
-        <ConfirmDialog
-          title={`${app.name} の使用を開始しますか？`}
-          message="アプリのデータカタログへのアクセスが設定されます。"
-          onCancel={() => setConfirmSub(false)}
-          loading={subscribe.isPending}
-          onConfirm={() =>
-            subscribe.mutate(app.app_id, {
-              onSuccess: () => {
-                setConfirmSub(false);
-                addToast({ type: "success", message: "使用開始しました" });
-              },
-              onError: () =>
-                addToast({ type: "error", message: "使用開始に失敗しました" }),
-            })
-          }
+      {showMou && (
+        <AppMouAgreementModal
+          appId={app.app_id}
+          appName={app.name}
+          onClose={() => setShowMou(false)}
+          onSuccess={() => setShowMou(false)}
         />
       )}
       {confirmUnsub && (

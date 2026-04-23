@@ -238,10 +238,31 @@ export function useApps(params?: { q?: string; subscribed?: boolean }) {
   });
 }
 
+export function useAppMou(appId: string) {
+  return useQuery({
+    queryKey: ["apps", appId, "mou"],
+    queryFn: () => appsApi.getMou(appId),
+    staleTime: 10 * 60_000,
+    enabled: !!appId,
+  });
+}
+
 export function useSubscribeApp() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (appId: string) => appsApi.subscribe(appId),
+    mutationFn: ({
+      appId,
+      mouVersion,
+      checklistResponses,
+    }: {
+      appId: string;
+      mouVersion: string;
+      checklistResponses: { item_id: string; checked: boolean }[];
+    }) =>
+      appsApi.subscribe(appId, {
+        mou_version: mouVersion,
+        checklist_responses: checklistResponses,
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["apps"] }),
   });
 }

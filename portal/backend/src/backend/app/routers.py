@@ -25,6 +25,7 @@ from backend.app.models import (
     SendNotificationRequest,
     StatisticsRequest,
     TimeseriesRequest,
+    SubscribeAppRequest,
     UpdateAppRequest,
     UpdateMemberRequest,
     UpdateMouRequest,
@@ -621,8 +622,28 @@ def update_app(app_id: str, body: UpdateAppRequest, user: CurrentUser = Depends(
     return {"app_id": app_id, "status": "UPDATED"}
 
 
+@router_apps.get("/{app_id}/mou")
+def get_app_mou(app_id: str, user: CurrentUser = Depends(get_current_user)):
+    settings = get_settings()
+    result = mock.mock_app_mou(app_id)
+    if not settings.dev_mode:
+        rows = db_svc.execute_sql(
+            f"""SELECT app_id, version, mou_text, checklist, updated_at
+                FROM {settings.portal_catalog}.apps.app_mou_definitions
+                WHERE app_id = ? ORDER BY version DESC LIMIT 1""",
+            (app_id,),
+        )
+        if rows:
+            result = rows[0]
+    return result
+
+
 @router_apps.post("/{app_id}/subscriptions")
-def subscribe_app(app_id: str, user: CurrentUser = Depends(get_current_user)):
+def subscribe_app(
+    app_id: str,
+    body: SubscribeAppRequest,
+    user: CurrentUser = Depends(get_current_user),
+):
     import uuid as _uuid
 
     settings = get_settings()

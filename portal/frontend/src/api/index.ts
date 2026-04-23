@@ -3,6 +3,7 @@ import type {
   Catalog,
   CatalogDetail,
   MouDefinition,
+  AppMouDefinition,
   CatalogMember,
   AccessRequest,
   SearchResult,
@@ -202,10 +203,17 @@ export const appsApi = {
       published_catalog_names?: string[];
     },
   ) => put<{ app_id: string; status: string }>(`/apps/${id}`, body),
-  subscribe: (id: string) =>
+  getMou: (id: string) => get<AppMouDefinition>(`/apps/${id}/mou`),
+  subscribe: (
+    id: string,
+    body: {
+      mou_version: string;
+      checklist_responses: { item_id: string; checked: boolean }[];
+    },
+  ) =>
     post<{ app_id: string; status: string; cognito_provisioned: boolean }>(
       `/apps/${id}/subscriptions`,
-      {},
+      body,
     ),
   unsubscribe: (id: string) =>
     del<{ deleted: boolean }>(`/apps/${id}/subscriptions`),
