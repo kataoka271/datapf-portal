@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars and fill in real values.
+# Alternatively, export DATABRICKS_HOST and DATABRICKS_TOKEN as env vars
+# and omit databricks_host / databricks_token here.
+
+databricks_host    = "https://dbc-xxxxxxxx.cloud.databricks.com"
+databricks_token   = "dapi..."
+# databricks_profile = "DEFAULT"   # use instead of host/token if preferred
+
+portal_catalog = "portal"
+warehouse_id   = "xxxxxxxxxxxxxxxx"   # DATABRICKS_SQL_WAREHOUSE_ID in .env
+sp_app_id      = ""                   # DATABRICKS_SP_CLIENT_ID in .env (optional)
