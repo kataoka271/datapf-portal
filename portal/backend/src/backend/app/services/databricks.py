@@ -214,6 +214,65 @@ def get_user_email(user_id: str) -> str | None:
         return None
 
 
+def list_unity_catalogs(user_id: str, role_map: dict[str, str]) -> list[dict[str, Any]]:
+    """List all Unity Catalog catalogs, merged with portal metadata and user access status."""
+    settings = get_settings()
+    if settings.dev_mode:
+        return []
+
+    _SYSTEM_CATALOGS = {"system", "hive_metastore", "__databricks_internal"}
+
+    try:
+        from datetime import datetime, timezone
+
+        from databricks.sdk import WorkspaceClient
+
+        w = WorkspaceClient()
+        uc_catalogs = [c for c in w.catalogs.list() if c.name and c.name not in _SYSTEM_CATALOGS]
+
+        portal_rows = execute_sql(
+            f"SELECT * FROM {settings.portal_catalog}.governance.catalog_definitions WHERE status = 'ACTIVE'"
+        )
+        portal_meta = {r["catalog_name"]: r for r in portal_rows}
+
+        # Latest request status per catalog for this user
+        agreement_rows = execute_sql(
+            f"""SELECT catalog_name, status
+                FROM (
+                    SELECT catalog_name, status,
+                           ROW_NUMBER() OVER (PARTITION BY catalog_name ORDER BY agreed_at DESC) AS rn
+                    FROM {settings.portal_catalog}.governance.mou_agreements
+                    WHERE user_id = ?
+                ) WHERE rn = 1""",
+            (user_id,),
+        )
+        user_requests = {r["catalog_name"]: r["status"] for r in agreement_rows}
+
+        result = []
+        for cat in uc_catalogs:
+            name = cat.name
+            meta = portal_meta.get(name, {})
+            user_role = role_map.get(name, "none")
+            request_status = user_requests.get(name)
+            if user_role in ("owner", "editor", "viewer"):
+                request_status = "APPROVED"
+            result.append({
+                "catalog_name": name,
+                "display_name": meta.get("display_name") or name,
+                "description": meta.get("description") or getattr(cat, "comment", "") or "",
+                "owner_user_id": meta.get("owner_user_id") or getattr(cat, "owner", "") or "",
+                "my_role": user_role,
+                "my_request_status": request_status,
+                "requires_approval": meta.get("requires_approval", False),
+                "status": "ACTIVE",
+                "mou_version": meta.get("mou_version") or "",
+                "updated_at": meta.get("updated_at") or datetime.now(timezone.utc).isoformat(),
+            })
+        return result
+    except Exception:
+        return []
+
+
 def get_user_catalog_roles(email: str) -> list[dict[str, str]]:
     """Get catalog roles for a user by checking their Databricks group membership."""
     settings = get_settings()

@@ -152,9 +152,8 @@ def list_catalogs(
     settings = get_settings()
     items = mock.mock_catalogs(user.user_id)  # dev mode
     if not settings.dev_mode:
-        items = db_svc.execute_sql(
-            f"SELECT * FROM {settings.portal_catalog}.governance.catalog_definitions WHERE status = 'ACTIVE'",
-        )
+        role_map = {r.catalog_name: r.role for r in user.catalog_roles}
+        items = db_svc.list_unity_catalogs(user.user_id, role_map)
     if q:
         q_lower = q.lower()
         items = [
